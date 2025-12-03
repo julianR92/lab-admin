@@ -36,6 +36,12 @@ Route::middleware('auth')->group(function () {
     // Rutas de Exámenes
     Route::resource('examenes', \App\Http\Controllers\ExamenController::class);
 
+    // Rutas de Parámetros de Exámenes (CRUD anidado)
+    Route::post('examen-parametros', [\App\Http\Controllers\ExamenParametroController::class, 'store'])->name('examen-parametros.store');
+    Route::get('examen-parametros/{examenParametro}/edit', [\App\Http\Controllers\ExamenParametroController::class, 'edit'])->name('examen-parametros.edit');
+    Route::put('examen-parametros/{examenParametro}', [\App\Http\Controllers\ExamenParametroController::class, 'update'])->name('examen-parametros.update');
+    Route::delete('examen-parametros/{examenParametro}', [\App\Http\Controllers\ExamenParametroController::class, 'destroy'])->name('examen-parametros.destroy');
+
     // Rutas de Empresa (solo edit y update)
     Route::get('/empresa/configuracion', [\App\Http\Controllers\EmpresaController::class, 'edit'])->name('empresa.edit');
     Route::put('/empresa/configuracion', [\App\Http\Controllers\EmpresaController::class, 'update'])->name('empresa.update');
