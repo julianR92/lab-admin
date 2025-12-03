@@ -33,6 +33,9 @@ Route::middleware('auth')->group(function () {
     // Rutas de Profesionales
     Route::resource('profesionales', \App\Http\Controllers\ProfesionalController::class);
 
+    // Rutas de Exámenes
+    Route::resource('examenes', \App\Http\Controllers\ExamenController::class);
+
     // Rutas de Empresa (solo edit y update)
     Route::get('/empresa/configuracion', [\App\Http\Controllers\EmpresaController::class, 'edit'])->name('empresa.edit');
     Route::put('/empresa/configuracion', [\App\Http\Controllers\EmpresaController::class, 'update'])->name('empresa.update');

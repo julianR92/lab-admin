@@ -44,16 +44,21 @@ class ProfesionalController extends Controller
 
     public function store(StoreProfesionalRequest $request)
     {
-        $data = $request->validated();
+        try {
+            $data = $request->validated();
 
-        if ($request->hasFile('firma_digital')) {
-            $data['firma_digital'] = $request->file('firma_digital')->store('firmas', 'public');
+            if ($request->hasFile('firma_digital')) {
+                $data['firma_digital'] = $request->file('firma_digital')->store('firmas', 'public');
+            }
+
+            Profesional::create($data);
+
+            return redirect()->route('profesionales.index')
+                ->with('success', 'Profesional registrado exitosamente.');
+        } catch (\Exception $e) {
+            return back()->withInput()
+                ->with('error', 'Error al registrar el profesional: '.$e->getMessage());
         }
-
-        Profesional::create($data);
-
-        return redirect()->route('profesionales.index')
-            ->with('success', 'Profesional registrado exitosamente.');
     }
 
     public function show(Profesional $profesionale)
@@ -70,19 +75,24 @@ class ProfesionalController extends Controller
 
     public function update(UpdateProfesionalRequest $request, Profesional $profesionale)
     {
-        $data = $request->validated();
+        try {
+            $data = $request->validated();
 
-        if ($request->hasFile('firma_digital')) {
-            if ($profesionale->firma_digital) {
-                Storage::disk('public')->delete($profesionale->firma_digital);
+            if ($request->hasFile('firma_digital')) {
+                if ($profesionale->firma_digital) {
+                    Storage::disk('public')->delete($profesionale->firma_digital);
+                }
+                $data['firma_digital'] = $request->file('firma_digital')->store('firmas', 'public');
             }
-            $data['firma_digital'] = $request->file('firma_digital')->store('firmas', 'public');
+
+            $profesionale->update($data);
+
+            return redirect()->route('profesionales.index')
+                ->with('success', 'Profesional actualizado exitosamente.');
+        } catch (\Exception $e) {
+            return back()->withInput()
+                ->with('error', 'Error al actualizar el profesional: '.$e->getMessage());
         }
-
-        $profesionale->update($data);
-
-        return redirect()->route('profesionales.index')
-            ->with('success', 'Profesional actualizado exitosamente.');
     }
 
     public function destroy(Profesional $profesionale)

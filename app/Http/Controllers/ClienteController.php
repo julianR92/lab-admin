@@ -50,13 +50,18 @@ class ClienteController extends Controller
 
     public function store(StoreClienteRequest $request): RedirectResponse
     {
-        $data = $request->validated();
-        $data['edad'] = \Carbon\Carbon::parse($data['fecha_nacimiento'])->age;
+        try {
+            $data = $request->validated();
+            $data['edad'] = \Carbon\Carbon::parse($data['fecha_nacimiento'])->age;
 
-        Cliente::create($data);
+            Cliente::create($data);
 
-        return redirect()->route('clientes.index')
-            ->with('success', 'Cliente registrado exitosamente');
+            return redirect()->route('clientes.index')
+                ->with('success', 'Cliente registrado exitosamente');
+        } catch (\Exception $e) {
+            return back()->withInput()
+                ->with('error', 'Error al registrar el cliente: '.$e->getMessage());
+        }
     }
 
     public function show(Cliente $cliente): View
@@ -71,13 +76,18 @@ class ClienteController extends Controller
 
     public function update(UpdateClienteRequest $request, Cliente $cliente): RedirectResponse
     {
-        $data = $request->validated();
-        $data['edad'] = \Carbon\Carbon::parse($data['fecha_nacimiento'])->age;
+        try {
+            $data = $request->validated();
+            $data['edad'] = \Carbon\Carbon::parse($data['fecha_nacimiento'])->age;
 
-        $cliente->update($data);
+            $cliente->update($data);
 
-        return redirect()->route('clientes.index')
-            ->with('success', 'Cliente actualizado exitosamente');
+            return redirect()->route('clientes.index')
+                ->with('success', 'Cliente actualizado exitosamente');
+        } catch (\Exception $e) {
+            return back()->withInput()
+                ->with('error', 'Error al actualizar el cliente: '.$e->getMessage());
+        }
     }
 
     public function destroy(Cliente $cliente): RedirectResponse

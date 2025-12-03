@@ -67,7 +67,7 @@
             </a>
         </div>
         <div class="col-md-3 mb-3">
-            <a href="#" class="text-decoration-none">
+            <a href="{{ route('examenes.index') }}" class="text-decoration-none">
                 <div class="card border-0 shadow-sm h-100 hover-card" style="transition: all 0.3s ease;">
                     <div class="card-body text-center py-4">
                         <div class="mb-3">

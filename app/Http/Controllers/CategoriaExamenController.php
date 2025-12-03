@@ -40,10 +40,15 @@ class CategoriaExamenController extends Controller
 
     public function store(StoreCategoriaExamenRequest $request)
     {
-        CategoriaExamen::create($request->validated());
+        try {
+            CategoriaExamen::create($request->validated());
 
-        return redirect()->route('categorias-examen.index')
-            ->with('success', 'Categoría creada exitosamente.');
+            return redirect()->route('categorias-examen.index')
+                ->with('success', 'Categoría creada exitosamente.');
+        } catch (\Exception $e) {
+            return back()->withInput()
+                ->with('error', 'Error al crear la categoría: '.$e->getMessage());
+        }
     }
 
     public function show(CategoriaExamen $categoriasExaman)
@@ -60,10 +65,15 @@ class CategoriaExamenController extends Controller
 
     public function update(UpdateCategoriaExamenRequest $request, CategoriaExamen $categoriasExaman)
     {
-        $categoriasExaman->update($request->validated());
+        try {
+            $categoriasExaman->update($request->validated());
 
-        return redirect()->route('categorias-examen.index')
-            ->with('success', 'Categoría actualizada exitosamente.');
+            return redirect()->route('categorias-examen.index')
+                ->with('success', 'Categoría actualizada exitosamente.');
+        } catch (\Exception $e) {
+            return back()->withInput()
+                ->with('error', 'Error al actualizar la categoría: '.$e->getMessage());
+        }
     }
 
     public function destroy(CategoriaExamen $categoriasExaman)

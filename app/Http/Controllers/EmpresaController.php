@@ -38,32 +38,37 @@ class EmpresaController extends Controller
      */
     public function update(UpdateEmpresaRequest $request)
     {
-        $empresa = Empresa::obtenerEmpresa();
+        try {
+            $empresa = Empresa::obtenerEmpresa();
 
-        // Si no existe el registro, crearlo
-        if (! $empresa) {
-            $empresa = new Empresa;
-        }
-
-        $datos = $request->validated();
-
-        // Manejar la subida del logo
-        if ($request->hasFile('logo')) {
-            // Eliminar logo anterior si existe
-            if ($empresa->logo && Storage::disk('public')->exists($empresa->logo)) {
-                Storage::disk('public')->delete($empresa->logo);
+            // Si no existe el registro, crearlo
+            if (! $empresa) {
+                $empresa = new Empresa;
             }
 
-            // Guardar nuevo logo
-            $rutaLogo = $request->file('logo')->store('logos', 'public');
-            $datos['logo'] = $rutaLogo;
+            $datos = $request->validated();
+
+            // Manejar la subida del logo
+            if ($request->hasFile('logo')) {
+                // Eliminar logo anterior si existe
+                if ($empresa->logo && Storage::disk('public')->exists($empresa->logo)) {
+                    Storage::disk('public')->delete($empresa->logo);
+                }
+
+                // Guardar nuevo logo
+                $rutaLogo = $request->file('logo')->store('logos', 'public');
+                $datos['logo'] = $rutaLogo;
+            }
+
+            $empresa->fill($datos);
+            $empresa->save();
+
+            return redirect()->route('empresa.edit')
+                ->with('success', 'Información de la empresa actualizada correctamente.');
+        } catch (\Exception $e) {
+            return back()->withInput()
+                ->with('error', 'Error al actualizar la empresa: '.$e->getMessage());
         }
-
-        $empresa->fill($datos);
-        $empresa->save();
-
-        return redirect()->route('empresa.edit')
-            ->with('success', 'Información de la empresa actualizada correctamente.');
     }
 
     /**
@@ -71,21 +76,25 @@ class EmpresaController extends Controller
      */
     public function deleteLogo()
     {
-        $empresa = Empresa::obtenerEmpresa();
+        try {
+            $empresa = Empresa::obtenerEmpresa();
 
-        if ($empresa && $empresa->logo) {
-            // Eliminar archivo físico
-            if (Storage::disk('public')->exists($empresa->logo)) {
-                Storage::disk('public')->delete($empresa->logo);
+            if ($empresa && $empresa->logo) {
+                // Eliminar archivo físico
+                if (Storage::disk('public')->exists($empresa->logo)) {
+                    Storage::disk('public')->delete($empresa->logo);
+                }
+
+                // Actualizar registro
+                $empresa->logo = null;
+                $empresa->save();
+
+                return back()->with('success', 'Logo eliminado correctamente.');
             }
 
-            // Actualizar registro
-            $empresa->logo = null;
-            $empresa->save();
-
-            return back()->with('success', 'Logo eliminado correctamente.');
+            return back()->with('error', 'No hay logo para eliminar.');
+        } catch (\Exception $e) {
+            return back()->with('error', 'Error al eliminar el logo: '.$e->getMessage());
         }
-
-        return back()->with('error', 'No hay logo para eliminar.');
     }
 }
