@@ -4,16 +4,16 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Servicio extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory;
 
     protected $table = 'servicio';
 
     protected $fillable = [
         'cliente_id',
+        'numero_orden',
         'fecha',
         'valor_total',
         'valor_pagado',
@@ -52,23 +52,27 @@ class Servicio extends Model
     // Accessors
     public function getNumeroOrdenAttribute(): string
     {
+        if ($this->attributes['numero_orden'] ?? false) {
+            return $this->attributes['numero_orden'];
+        }
+
         return 'ORD-'.str_pad($this->id, 8, '0', STR_PAD_LEFT);
     }
 
     public function getSaldoPendienteAttribute(): float
     {
-        return $this->valor_total - $this->valor_pagado;
+        return max(0, $this->valor_total - $this->valor_pagado);
     }
 
     // Scopes
     public function scopePendientes($query)
     {
-        return $query->where('estado_pago', 'Pendiente');
+        return $query->where('estado_pago', 'PENDIENTE');
     }
 
     public function scopePagados($query)
     {
-        return $query->where('estado_pago', 'Pagado');
+        return $query->where('estado_pago', 'PAGADO');
     }
 
     public function scopeDelDia($query, $fecha = null)
@@ -81,11 +85,25 @@ class Servicio extends Model
     // Helpers
     public function estaPagado(): bool
     {
-        return $this->estado_pago === 'Pagado';
+        return $this->estado_pago === 'PAGADO';
     }
 
     public function tieneSaldoPendiente(): bool
     {
         return $this->saldo_pendiente > 0;
+    }
+
+    public function puedeEditarse(): bool
+    {
+        return ! $this->serviciosExamen()
+            ->whereIn('estado', ['COMPLETADO', 'VALIDADO', 'ENTREGADO'])
+            ->exists();
+    }
+
+    public function puedeEliminarse(): bool
+    {
+        return ! $this->serviciosExamen()
+            ->where('estado', '!=', 'PENDIENTE')
+            ->exists();
     }
 }

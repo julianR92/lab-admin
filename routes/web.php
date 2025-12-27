@@ -15,13 +15,19 @@ Route::get('/reset-password/{token}', [LoginController::class, 'showResetForm'])
 Route::post('/reset-password', [LoginController::class, 'resetPassword'])->name('reset-password');
 
 Route::get('/', function () {
-    return view('welcome');
+    $empresa = \App\Models\Empresa::first();
+    return view('welcome', compact('empresa'));
 });
 
 // Rutas protegidas (requieren autenticación)
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard', function () {
-        return view('dashboard');
+        $totalPacientes = \App\Models\Cliente::count();
+        $examenesPendientes = \App\Models\ServicioExamen::where('estado', 'PENDIENTE')->count();
+        $resultadosValidados = \App\Models\ServicioExamen::where('estado', 'VALIDADO')->count();
+        $ingresosHoy = \App\Models\Servicio::whereDate('fecha', today())->sum('valor_pagado');
+
+        return view('dashboard', compact('totalPacientes', 'examenesPendientes', 'resultadosValidados', 'ingresosHoy'));
     })->name('dashboard');
 
     // Rutas de Clientes
@@ -52,4 +58,20 @@ Route::middleware('auth')->group(function () {
     Route::get('/empresa/configuracion', [\App\Http\Controllers\EmpresaController::class, 'edit'])->name('empresa.edit');
     Route::put('/empresa/configuracion', [\App\Http\Controllers\EmpresaController::class, 'update'])->name('empresa.update');
     Route::delete('/empresa/logo', [\App\Http\Controllers\EmpresaController::class, 'deleteLogo'])->name('empresa.delete-logo');
+
+    // Rutas de Servicios
+    Route::resource('servicios', \App\Http\Controllers\ServicioController::class);
+    Route::get('servicios/{servicio}/orden-pdf', [\App\Http\Controllers\ServicioController::class, 'descargarOrden'])->name('servicios.descargar-orden');
+    Route::post('servicios/{servicio}/pago', [\App\Http\Controllers\ServicioController::class, 'registrarPago'])->name('servicios.registrar-pago');
+    Route::post('servicio-examen/{servicioExamen}/profesional', [\App\Http\Controllers\ServicioController::class, 'asignarProfesional'])->name('servicios.asignar-profesional');
+    Route::post('servicio-examen/{servicioExamen}/estado', [\App\Http\Controllers\ServicioController::class, 'cambiarEstado'])->name('servicios.cambiar-estado');
+
+    // Rutas de Perfil
+    Route::get('/perfil', [\App\Http\Controllers\PerfilController::class, 'edit'])->name('perfil.edit');
+    Route::put('/perfil', [\App\Http\Controllers\PerfilController::class, 'update'])->name('perfil.update');
+});
+
+// Rutas API
+Route::prefix('api')->group(function () {
+    Route::get('/clientes/buscar', [\App\Http\Controllers\Api\ClienteController::class, 'buscar'])->name('api.clientes.buscar');
 });

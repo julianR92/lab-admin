@@ -18,7 +18,6 @@ class ClienteFactory extends Factory
     {
         $genero = fake()->randomElement(['M', 'F']);
         $fechaNacimiento = fake()->dateTimeBetween('-80 years', '-18 years');
-        $edad = \Carbon\Carbon::parse($fechaNacimiento)->age;
 
         return [
             'nombre' => fake()->firstName($genero === 'M' ? 'male' : 'female'),
@@ -27,10 +26,8 @@ class ClienteFactory extends Factory
             'documento' => fake()->unique()->numerify('##########'),
             'genero' => $genero,
             'fecha_nacimiento' => $fechaNacimiento,
-            'edad' => $edad,
             'telefono' => fake()->numerify('3#########'),
             'email' => fake()->unique()->safeEmail(),
-            'direccion' => fake()->streetAddress(),
             'ciudad' => fake()->randomElement([
                 'Bogotá',
                 'Medellín',

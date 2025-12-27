@@ -64,7 +64,7 @@
 
                         <div class="col-md-4 mb-3">
                             <label class="text-muted small">Edad</label>
-                            <h6>{{ $cliente->edad }} años</h6>
+                            <h6>{{ \Carbon\Carbon::parse($cliente->fecha_nacimiento)->age}} años</h6>
                         </div>
 
                         <!-- Información de Contacto -->
@@ -152,7 +152,7 @@
                             <hr>
                             <div class="alert alert-info">
                                 <i class="fas fa-info-circle me-2"></i>
-                                <strong>Nota:</strong> Este cliente tiene <strong>0</strong> servicios registrados.
+                                <strong>Nota:</strong> Este cliente tiene <strong>{{ $cliente->servicios->count() }}</strong> servicios registrados.
                             </div>
                         </div>
                     </div>
