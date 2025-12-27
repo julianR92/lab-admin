@@ -14,6 +14,7 @@ class ExamenParametro extends Model
     protected $fillable = [
         'examen_id',
         'nombre_parametro',
+        'seccion',
         'codigo_parametro',
         'tipo_dato',
         'unidad_medida',

@@ -27,6 +27,7 @@ class StoreExamenRequest extends FormRequest
      */
     public function rules(): array
     {
+
         return [
             'categoria_id' => ['required', 'exists:categoria_examen,id'],
             'codigo' => ['required', 'string', 'max:20', 'unique:examen,codigo'],

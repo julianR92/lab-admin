@@ -52,6 +52,27 @@ class ExamenValorReferencia extends Model
         return $this->belongsTo(ExamenParametro::class, 'parametro_id');
     }
 
+    /**
+     * Obtener los resultados asociados a través del parámetro.
+     * Solo aplica si el valor de referencia está asociado a un parámetro específico.
+     */
+    public function resultados()
+    {
+        if ($this->parametro_id) {
+            return $this->hasManyThrough(
+                ResultadoExamen::class,
+                ExamenParametro::class,
+                'id', // Foreign key en examen_parametros
+                'parametro_id', // Foreign key en resultados_examen
+                'parametro_id', // Local key en examen_valores_referencia
+                'id' // Local key en examen_parametros
+            );
+        }
+
+        // Si es un valor de referencia general (sin parametro_id), retornar query vacío
+        return ResultadoExamen::whereRaw('1 = 0');
+    }
+
     // Scopes
     public function scopeActivos($query)
     {

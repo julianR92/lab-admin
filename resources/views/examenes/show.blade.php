@@ -210,8 +210,11 @@
 
             <!-- Valores de Referencia -->
             <div class="card border-0 shadow-sm mb-4">
-                <div class="card-header bg-white py-3">
+                <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
                     <h5 class="mb-0"><i class="fas fa-ruler me-2"></i>Valores de Referencia ({{ $examen->valoresReferencia->count() }})</h5>
+                    <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#valorReferenciaModal">
+                        <i class="fas fa-plus me-2"></i>Agregar Valor de Referencia
+                    </button>
                 </div>
                 <div class="card-body">
                     @if($examen->valoresReferencia->count() > 0)
@@ -219,17 +222,28 @@
                             <table class="table table-sm table-hover mb-0">
                                 <thead class="table-light">
                                     <tr>
+                                        <th width="50">Orden</th>
+                                        <th width="80">Parámetro</th>
                                         <th>Tipo</th>
                                         <th width="80">Género</th>
-                                        <th width="100">Edad Min</th>
-                                        <th width="100">Edad Max</th>
+                                        <th width="80">Edad Min</th>
+                                        <th width="80">Edad Max</th>
                                         <th>Rango / Valor</th>
                                         <th width="80" class="text-center">Estado</th>
+                                        <th width="100" class="text-center">Acciones</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     @foreach($examen->valoresReferencia->sortBy('orden') as $valor)
                                         <tr>
+                                            <td class="text-center">{{ $valor->orden }}</td>
+                                            <td>
+                                                @if($valor->parametro)
+                                                    <code class="small">{{ $valor->parametro->codigo_parametro }}</code>
+                                                @else
+                                                    <span class="text-muted small">General</span>
+                                                @endif
+                                            </td>
                                             <td><span class="badge bg-info">{{ $valor->tipo_referencia }}</span></td>
                                             <td>
                                                 @if($valor->genero)
@@ -244,11 +258,19 @@
                                             <td>{{ $valor->edad_max ?? '-' }}</td>
                                             <td>
                                                 @if($valor->tipo_referencia === 'RANGO')
-                                                    {{ $valor->valor_min }} - {{ $valor->valor_max }}
+                                                    <strong>{{ $valor->valor_min }} - {{ $valor->valor_max }}</strong>
+                                                    @if($valor->parametro && $valor->parametro->unidad_medida)
+                                                        <span class="text-muted">{{ $valor->parametro->unidad_medida }}</span>
+                                                    @endif
                                                 @elseif($valor->tipo_referencia === 'CUALITATIVO')
-                                                    {{ $valor->valor_cualitativo }}
+                                                    <span class="badge bg-secondary">{{ $valor->valor_cualitativo }}</span>
+                                                @elseif($valor->tipo_referencia === 'CATEGORIZADO')
+                                                    <strong>{{ $valor->categoria }}:</strong> {{ $valor->valor_min }} - {{ $valor->valor_max }}
+                                                    @if($valor->operador)
+                                                        <span class="text-muted">({{ $valor->operador }})</span>
+                                                    @endif
                                                 @else
-                                                    {{ $valor->descripcion }}
+                                                    <span class="text-muted">{{ Str::limit($valor->descripcion, 50) }}</span>
                                                 @endif
                                             </td>
                                             <td class="text-center">
@@ -257,6 +279,18 @@
                                                 @else
                                                     <span class="badge bg-danger">Inactivo</span>
                                                 @endif
+                                            </td>
+                                            <td class="text-center">
+                                                <button type="button" class="btn btn-sm btn-info" onclick="editValorReferencia({{ $valor->id }})" title="Editar">
+                                                    <i class="fas fa-edit"></i>
+                                                </button>
+                                                <form action="{{ route('examen-valores-referencia.destroy', $valor->id) }}" method="POST" class="d-inline" onsubmit="return confirm('¿Está seguro de eliminar este valor de referencia?');">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="btn btn-sm btn-danger" title="Eliminar">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </form>
                                             </td>
                                         </tr>
                                     @endforeach
@@ -377,6 +411,7 @@
                 <input type="hidden" name="_method" id="parametroMethod" value="POST">
                 <input type="hidden" name="examen_id" value="{{ $examen->id }}">
                 <input type="hidden" name="parametro_id" id="parametroId">
+                <input type="hidden" name="_form_type" value="parametro">
 
                 <div class="modal-header">
                     <h5 class="modal-title" id="parametroModalLabel">
@@ -386,9 +421,11 @@
                 </div>
 
                 <div class="modal-body">
-                    @if ($errors->any())
-                        <div class="alert alert-danger">
-                            <ul class="mb-0">
+                    @if ($errors->any() && old('_form_type') === 'parametro')
+                        <div class="alert alert-danger alert-dismissible fade show">
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            <strong><i class="fas fa-exclamation-triangle me-2"></i>Errores de Validación:</strong>
+                            <ul class="mb-0 mt-2">
                                 @foreach ($errors->all() as $error)
                                     <li>{{ $error }}</li>
                                 @endforeach
@@ -402,6 +439,12 @@
                             <div class="mb-3">
                                 <label for="nombre_parametro" class="form-label">Nombre del Parámetro <span class="text-danger">*</span></label>
                                 <input type="text" class="form-control" id="nombre_parametro" name="nombre_parametro" required maxlength="255" placeholder="Ej: Glucosa, Hemoglobina">
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="seccion" class="form-label">Sección / Subtítulo</label>
+                                <input type="text" class="form-control" id="seccion" name="seccion" maxlength="100" placeholder="Ej: Hemograma, Perfil Lipídico">
+                                <small class="text-muted">Opcional - Agrupa parámetros bajo un subtítulo</small>
                             </div>
 
                             <div class="mb-3">
@@ -512,6 +555,196 @@
     </div>
 </div>
 
+<!-- Modal Valor de Referencia -->
+<div class="modal fade" id="valorReferenciaModal" tabindex="-1" aria-labelledby="valorReferenciaModalLabel" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form id="valorReferenciaForm" method="POST" action="{{ route('examen-valores-referencia.store') }}">
+                @csrf
+                <input type="hidden" name="_method" id="valorReferenciaMethod" value="POST">
+                <input type="hidden" name="examen_id" value="{{ $examen->id }}">
+                <input type="hidden" name="valor_referencia_id" id="valorReferenciaId" value="">
+                <input type="hidden" name="_form_type" value="valor_referencia">
+
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="valorReferenciaModalTitle">
+                        <i class="fas fa-ruler me-2"></i><span id="modalTitleVR">Nuevo Valor de Referencia</span>
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close" onclick="resetValorReferenciaModal()"></button>
+                </div>
+
+                <div class="modal-body">
+                    <!-- Mostrar errores de validación -->
+                    @if ($errors->any() && old('_form_type') === 'valor_referencia')
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            <strong><i class="fas fa-exclamation-triangle me-2"></i>Errores de validación:</strong>
+                            <ul class="mb-0 mt-2">
+                                @foreach ($errors->all() as $error)
+                                    <li>{{ $error }}</li>
+                                @endforeach
+                            </ul>
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    @endif
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="parametro_id" class="form-label">Parámetro (opcional)</label>
+                                <select class="form-select" id="parametro_id" name="parametro_id">
+                                    <option value="">General (aplica a todo el examen)</option>
+                                    @foreach($examen->parametros->sortBy('orden') as $parametro)
+                                        <option value="{{ $parametro->id }}">{{ $parametro->codigo_parametro }} - {{ $parametro->nombre_parametro }}</option>
+                                    @endforeach
+                                </select>
+                                <small class="text-muted">Dejar vacío para valores generales del examen</small>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="tipo_referencia" class="form-label">Tipo de Referencia <span class="text-danger">*</span></label>
+                                <select class="form-select" id="tipo_referencia" name="tipo_referencia" required onchange="toggleTipoReferenciaFields()">
+                                    <option value="">Seleccione...</option>
+                                    <option value="RANGO">Rango (Min-Max)</option>
+                                    <option value="CUALITATIVO">Cualitativo</option>
+                                    <option value="CATEGORIZADO">Categorizado</option>
+                                    <option value="INFORMATIVO">Informativo</option>
+                                </select>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="orden" class="form-label">Orden de Evaluación <span class="text-danger">*</span></label>
+                                <input type="number" class="form-control" id="orden_vr" name="orden" min="1" max="999" required>
+                                <small class="text-muted">Los valores con menor orden se evalúan primero</small>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <h6 class="text-muted mb-3"><i class="fas fa-filter me-2"></i>Contexto Clínico (opcional)</h6>
+
+                            <div class="mb-3">
+                                <label for="genero" class="form-label">Género</label>
+                                <select class="form-select" id="genero" name="genero">
+                                    <option value="">Ambos</option>
+                                    <option value="M">Masculino</option>
+                                    <option value="F">Femenino</option>
+                                </select>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-6">
+                                    <div class="mb-3">
+                                        <label for="edad_min" class="form-label">Edad Mínima</label>
+                                        <input type="number" class="form-control" id="edad_min" name="edad_min" min="0" max="120" placeholder="Años">
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="mb-3">
+                                        <label for="edad_max" class="form-label">Edad Máxima</label>
+                                        <input type="number" class="form-control" id="edad_max" name="edad_max" min="0" max="120" placeholder="Años">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="condicion_especial" class="form-label">Condición Especial</label>
+                                <input type="text" class="form-control" id="condicion_especial" name="condicion_especial" placeholder="Ej: Embarazo, Diabetes, etc.">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Campos según tipo_referencia -->
+                    <div id="field_rango" style="display:none;">
+                        <hr>
+                        <h6 class="text-primary"><i class="fas fa-arrows-alt-h me-2"></i>Valores de Rango</h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="valor_min" class="form-label">Valor Mínimo <span class="text-danger">*</span></label>
+                                    <input type="number" step="0.0001" class="form-control" id="valor_min" name="valor_min">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="valor_max" class="form-label">Valor Máximo <span class="text-danger">*</span></label>
+                                    <input type="number" step="0.0001" class="form-control" id="valor_max" name="valor_max">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="field_cualitativo" style="display:none;">
+                        <hr>
+                        <h6 class="text-primary"><i class="fas fa-check-circle me-2"></i>Valor Cualitativo</h6>
+                        <div class="mb-3">
+                            <label for="valor_cualitativo" class="form-label">Valor Esperado <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="valor_cualitativo" name="valor_cualitativo" placeholder="Ej: Negativo, Positivo, Reactivo, etc.">
+                        </div>
+                    </div>
+
+                    <div id="field_categorizado" style="display:none;">
+                        <hr>
+                        <h6 class="text-primary"><i class="fas fa-layer-group me-2"></i>Valores Categorizados</h6>
+                        <div class="mb-3">
+                            <label for="categoria" class="form-label">Categoría <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="categoria" name="categoria" placeholder="Ej: Óptimo, Normal, Alto, Crítico">
+                        </div>
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="valor_min_cat" class="form-label">Valor Mínimo <span class="text-danger">*</span></label>
+                                    <input type="number" step="0.0001" class="form-control" id="valor_min_cat" name="valor_min">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="valor_max_cat" class="form-label">Valor Máximo <span class="text-danger">*</span></label>
+                                    <input type="number" step="0.0001" class="form-control" id="valor_max_cat" name="valor_max">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="operador" class="form-label">Operador</label>
+                                    <select class="form-select" id="operador" name="operador">
+                                        <option value="">Ninguno</option>
+                                        <option value="<"><</option>
+                                        <option value="<="><=</option>
+                                        <option value=">">></option>
+                                        <option value=">=">>=</option>
+                                        <option value="==">==</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="descripcion" class="form-label">Descripción / Notas</label>
+                        <textarea class="form-control" id="descripcion" name="descripcion" rows="2" placeholder="Información adicional sobre este valor de referencia"></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="status_vr" name="status" checked>
+                            <label class="form-check-label" for="status_vr">
+                                Estado Activo
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" onclick="resetValorReferenciaModal()">
+                        <i class="fas fa-times me-2"></i>Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-2"></i><span id="submitButtonTextVR">Guardar Valor de Referencia</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 @push('scripts')
 <script>
 function confirmDelete() {
@@ -519,6 +752,8 @@ function confirmDelete() {
         document.getElementById('deleteForm').submit();
     }
 }
+
+// ========== FUNCIONES PARÁMETROS ==========
 
 // Resetear modal para nuevo parámetro
 function resetParametroModal() {
@@ -598,6 +833,7 @@ function editParametro(parametroId) {
 
             // Llenar campos
             document.getElementById('nombre_parametro').value = parametro.nombre_parametro;
+            document.getElementById('seccion').value = parametro.seccion || '';
             document.getElementById('codigo_parametro').value = parametro.codigo_parametro;
             document.getElementById('tipo_dato').value = parametro.tipo_dato;
             document.getElementById('unidad_medida').value = parametro.unidad_medida || '';
@@ -688,8 +924,8 @@ document.getElementById('parametroForm').addEventListener('submit', function(e) 
     }
 });
 
-// Abrir modal si hay errores de validación y restaurar datos
-@if ($errors->any() && old('examen_id'))
+// Abrir modal de parámetro si hay errores de validación y restaurar datos
+@if ($errors->any() && old('_form_type') === 'parametro')
     document.addEventListener('DOMContentLoaded', function() {
         // Determinar si es edición o creación según el método
         const method = '{{ old("_method") }}';
@@ -712,6 +948,7 @@ document.getElementById('parametroForm').addEventListener('submit', function(e) 
 
         // Restaurar valores del formulario
         document.getElementById('nombre_parametro').value = '{{ old("nombre_parametro") }}';
+        document.getElementById('seccion').value = '{{ old("seccion") }}';
         document.getElementById('codigo_parametro').value = '{{ old("codigo_parametro") }}';
         document.getElementById('tipo_dato').value = '{{ old("tipo_dato") }}';
         document.getElementById('unidad_medida').value = '{{ old("unidad_medida") }}';
@@ -761,6 +998,205 @@ document.getElementById('parametroForm').addEventListener('submit', function(e) 
 
         // Mostrar modal
         new bootstrap.Modal(document.getElementById('parametroModal')).show();
+    });
+@endif
+
+// ========== FUNCIONES VALORES DE REFERENCIA ==========
+
+// Resetear modal para nuevo valor de referencia
+function resetValorReferenciaModal() {
+    document.getElementById('valorReferenciaForm').reset();
+    document.getElementById('valorReferenciaMethod').value = 'POST';
+    document.getElementById('valorReferenciaForm').action = '{{ route("examen-valores-referencia.store") }}';
+    document.getElementById('modalTitleVR').textContent = 'Nuevo Valor de Referencia';
+    document.getElementById('submitButtonTextVR').textContent = 'Guardar Valor de Referencia';
+    document.getElementById('valorReferenciaId').value = '';
+    document.getElementById('orden_vr').value = {{ $examen->valoresReferencia->count() + 1 }};
+
+    // Resetear campos condicionales y habilitar todos
+    document.getElementById('field_rango').style.display = 'none';
+    document.getElementById('field_cualitativo').style.display = 'none';
+    document.getElementById('field_categorizado').style.display = 'none';
+
+    // Habilitar todos los campos (por si quedaron deshabilitados)
+    document.getElementById('valor_min').disabled = false;
+    document.getElementById('valor_max').disabled = false;
+    document.getElementById('valor_cualitativo').disabled = false;
+    document.getElementById('categoria').disabled = false;
+    document.getElementById('valor_min_cat').disabled = false;
+    document.getElementById('valor_max_cat').disabled = false;
+    document.getElementById('operador').disabled = false;
+}
+
+// Mostrar/ocultar campos según tipo de referencia
+function toggleTipoReferenciaFields() {
+    const tipoReferencia = document.getElementById('tipo_referencia').value;
+
+    // Ocultar y deshabilitar todos los campos
+    document.getElementById('field_rango').style.display = 'none';
+    document.getElementById('field_cualitativo').style.display = 'none';
+    document.getElementById('field_categorizado').style.display = 'none';
+
+    // Deshabilitar todos los inputs para que no se envíen
+    document.getElementById('valor_min').disabled = true;
+    document.getElementById('valor_max').disabled = true;
+    document.getElementById('valor_cualitativo').disabled = true;
+    document.getElementById('categoria').disabled = true;
+    document.getElementById('valor_min_cat').disabled = true;
+    document.getElementById('valor_max_cat').disabled = true;
+    document.getElementById('operador').disabled = true;
+
+    // Mostrar y habilitar campos según tipo
+    switch(tipoReferencia) {
+        case 'RANGO':
+            document.getElementById('field_rango').style.display = 'block';
+            document.getElementById('valor_min').disabled = false;
+            document.getElementById('valor_max').disabled = false;
+            // Limpiar campos no usados
+            document.getElementById('valor_cualitativo').value = '';
+            document.getElementById('categoria').value = '';
+            document.getElementById('operador').value = '';
+            document.getElementById('valor_min_cat').value = '';
+            document.getElementById('valor_max_cat').value = '';
+            break;
+        case 'CUALITATIVO':
+            document.getElementById('field_cualitativo').style.display = 'block';
+            document.getElementById('valor_cualitativo').disabled = false;
+            // Limpiar campos no usados
+            document.getElementById('valor_min').value = '';
+            document.getElementById('valor_max').value = '';
+            document.getElementById('categoria').value = '';
+            document.getElementById('operador').value = '';
+            document.getElementById('valor_min_cat').value = '';
+            document.getElementById('valor_max_cat').value = '';
+            break;
+        case 'CATEGORIZADO':
+            document.getElementById('field_categorizado').style.display = 'block';
+            document.getElementById('categoria').disabled = false;
+            document.getElementById('valor_min_cat').disabled = false;
+            document.getElementById('valor_max_cat').disabled = false;
+            document.getElementById('operador').disabled = false;
+            // Limpiar campos no usados
+            document.getElementById('valor_cualitativo').value = '';
+            document.getElementById('valor_min').value = '';
+            document.getElementById('valor_max').value = '';
+            break;
+        case 'INFORMATIVO':
+            // Solo descripción, limpiar todos los valores
+            document.getElementById('valor_min').value = '';
+            document.getElementById('valor_max').value = '';
+            document.getElementById('valor_cualitativo').value = '';
+            document.getElementById('categoria').value = '';
+            document.getElementById('operador').value = '';
+            document.getElementById('valor_min_cat').value = '';
+            document.getElementById('valor_max_cat').value = '';
+            break;
+    }
+}
+
+// Editar valor de referencia
+function editValorReferencia(valorReferenciaId) {
+    fetch(`/examen-valores-referencia/${valorReferenciaId}/edit`, {
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const valor = data.valorReferencia;
+
+            // Cambiar a modo edición
+            document.getElementById('valorReferenciaMethod').value = 'PUT';
+            document.getElementById('valorReferenciaForm').action = `/examen-valores-referencia/${valorReferenciaId}`;
+            document.getElementById('modalTitleVR').textContent = 'Editar Valor de Referencia';
+            document.getElementById('submitButtonTextVR').textContent = 'Actualizar Valor de Referencia';
+            document.getElementById('valorReferenciaId').value = valor.id;
+
+            // Llenar campos básicos
+            document.getElementById('parametro_id').value = valor.parametro_id || '';
+            document.getElementById('tipo_referencia').value = valor.tipo_referencia;
+            document.getElementById('orden_vr').value = valor.orden;
+            document.getElementById('genero').value = valor.genero || '';
+            document.getElementById('edad_min').value = valor.edad_min || '';
+            document.getElementById('edad_max').value = valor.edad_max || '';
+            document.getElementById('condicion_especial').value = valor.condicion_especial || '';
+            document.getElementById('descripcion').value = valor.descripcion || '';
+            document.getElementById('status_vr').checked = valor.status;
+
+            // Llenar campos según tipo
+            if (valor.tipo_referencia === 'RANGO') {
+                document.getElementById('valor_min').value = valor.valor_min || '';
+                document.getElementById('valor_max').value = valor.valor_max || '';
+            } else if (valor.tipo_referencia === 'CUALITATIVO') {
+                document.getElementById('valor_cualitativo').value = valor.valor_cualitativo || '';
+            } else if (valor.tipo_referencia === 'CATEGORIZADO') {
+                document.getElementById('categoria').value = valor.categoria || '';
+                document.getElementById('valor_min_cat').value = valor.valor_min || '';
+                document.getElementById('valor_max_cat').value = valor.valor_max || '';
+                document.getElementById('operador').value = valor.operador || '';
+            }
+
+            // Actualizar visibilidad de campos
+            toggleTipoReferenciaFields();
+
+            // Mostrar modal
+            new bootstrap.Modal(document.getElementById('valorReferenciaModal')).show();
+        } else {
+            alert('Error al cargar el valor de referencia: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error al cargar el valor de referencia');
+    });
+}
+
+// Auto-abrir modal de valores de referencia si hay errores de validación
+@if ($errors->any() && old('_form_type') === 'valor_referencia')
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('Abriendo modal de valores de referencia por errores de validación');
+
+        // Es un valor de referencia, no un parámetro
+        document.getElementById('valorReferenciaMethod').value = '{{ old("_method", "POST") }}';
+
+        @if (old('_method') === 'PUT' && old('valor_referencia_id'))
+            document.getElementById('valorReferenciaForm').action = `/examen-valores-referencia/{{ old('valor_referencia_id') }}`;
+            document.getElementById('modalTitleVR').textContent = 'Editar Valor de Referencia';
+            document.getElementById('submitButtonTextVR').textContent = 'Actualizar Valor de Referencia';
+            document.getElementById('valorReferenciaId').value = '{{ old("valor_referencia_id") }}';
+        @endif
+
+        // Restaurar campos básicos
+        document.getElementById('parametro_id').value = '{{ old("parametro_id") }}';
+        document.getElementById('tipo_referencia').value = '{{ old("tipo_referencia") }}';
+        document.getElementById('orden_vr').value = '{{ old("orden") }}';
+        document.getElementById('genero').value = '{{ old("genero") }}';
+        document.getElementById('edad_min').value = '{{ old("edad_min") }}';
+        document.getElementById('edad_max').value = '{{ old("edad_max") }}';
+        document.getElementById('condicion_especial').value = '{{ old("condicion_especial") }}';
+        document.getElementById('descripcion').value = `{!! str_replace(["\r\n", "\n", "\r"], "\\n", old("descripcion", "")) !!}`;
+        document.getElementById('status_vr').checked = {{ old("status", true) ? 'true' : 'false' }};
+
+        // Actualizar visibilidad y habilitar campos según tipo ANTES de restaurar valores
+        toggleTipoReferenciaFields();
+
+        // Restaurar valores específicos DESPUÉS de que los campos estén habilitados
+        @if(old('tipo_referencia') === 'RANGO')
+            document.getElementById('valor_min').value = '{{ old("valor_min") }}';
+            document.getElementById('valor_max').value = '{{ old("valor_max") }}';
+        @elseif(old('tipo_referencia') === 'CUALITATIVO')
+            document.getElementById('valor_cualitativo').value = '{{ old("valor_cualitativo") }}';
+        @elseif(old('tipo_referencia') === 'CATEGORIZADO')
+            document.getElementById('categoria').value = '{{ old("categoria") }}';
+            document.getElementById('valor_min_cat').value = '{{ old("valor_min") }}';
+            document.getElementById('valor_max_cat').value = '{{ old("valor_max") }}';
+            document.getElementById('operador').value = '{{ old("operador") }}';
+        @endif
+
+        // Mostrar modal
+        new bootstrap.Modal(document.getElementById('valorReferenciaModal')).show();
     });
 @endif
 </script>

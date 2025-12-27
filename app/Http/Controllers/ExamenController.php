@@ -61,8 +61,8 @@ class ExamenController extends Controller
     {
         try {
             $datos = $request->validated();
-            $datos['status'] = $request->has('status') ? 1 : 0;
-            $datos['requiere_ayuno'] = $request->has('requiere_ayuno') ? 1 : 0;
+            //$datos['status'] = $request->has('status') ? 1 : 0;
+            //$datos['requiere_ayuno'] = $request->has('requiere_ayuno') ? 1 : 0;
 
             $examen = Examen::create($datos);
 
@@ -106,9 +106,8 @@ class ExamenController extends Controller
     {
         try {
             $datos = $request->validated();
-            $datos['status'] = $request->has('status') ? 1 : 0;
-            $datos['requiere_ayuno'] = $request->has('requiere_ayuno') ? 1 : 0;
-
+            //$datos['status'] = $request->has('status') ? 1 : 0;
+            //$datos['requiere_ayuno'] = $request->has('requiere_ayuno') ? 1 : 0;
             $examene->update($datos);
 
             return redirect()->route('examenes.show', $examene)

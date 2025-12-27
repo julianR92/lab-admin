@@ -42,6 +42,12 @@ Route::middleware('auth')->group(function () {
     Route::put('examen-parametros/{examenParametro}', [\App\Http\Controllers\ExamenParametroController::class, 'update'])->name('examen-parametros.update');
     Route::delete('examen-parametros/{examenParametro}', [\App\Http\Controllers\ExamenParametroController::class, 'destroy'])->name('examen-parametros.destroy');
 
+    // Rutas de Valores de Referencia de Exámenes (CRUD anidado)
+    Route::post('examen-valores-referencia', [\App\Http\Controllers\ExamenValorReferenciaController::class, 'store'])->name('examen-valores-referencia.store');
+    Route::get('examen-valores-referencia/{examenValorReferencia}/edit', [\App\Http\Controllers\ExamenValorReferenciaController::class, 'edit'])->name('examen-valores-referencia.edit');
+    Route::put('examen-valores-referencia/{examenValorReferencia}', [\App\Http\Controllers\ExamenValorReferenciaController::class, 'update'])->name('examen-valores-referencia.update');
+    Route::delete('examen-valores-referencia/{examenValorReferencia}', [\App\Http\Controllers\ExamenValorReferenciaController::class, 'destroy'])->name('examen-valores-referencia.destroy');
+
     // Rutas de Empresa (solo edit y update)
     Route::get('/empresa/configuracion', [\App\Http\Controllers\EmpresaController::class, 'edit'])->name('empresa.edit');
     Route::put('/empresa/configuracion', [\App\Http\Controllers\EmpresaController::class, 'update'])->name('empresa.update');

@@ -172,7 +172,7 @@
     <footer class="bg-light border-top mt-5 py-4">
         <div class="container text-center">
             <p class="text-muted mb-0">
-                <i class="fas fa-flask me-2"></i>Sistema de Gestión de Laboratorio © 2024
+                <i class="fas fa-flask me-2"></i>Lab Admin © {{ date('Y') }}
             </p>
         </div>
     </footer>

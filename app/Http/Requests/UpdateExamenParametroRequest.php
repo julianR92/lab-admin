@@ -31,12 +31,13 @@ class UpdateExamenParametroRequest extends FormRequest
      */
     public function rules(): array
     {
-       $parametroId = $this->input('parametro_id');
-       $examenId = $this->input('examen_id');
+        $parametroId = $this->input('parametro_id');
+        $examenId = $this->input('examen_id');
 
         return [
             'examen_id' => 'required|exists:examen,id',
             'nombre_parametro' => 'required|string|max:255',
+            'seccion' => 'nullable|string|max:100|regex:/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/',
             'codigo_parametro' => [
                 'required',
                 'string',
@@ -69,6 +70,7 @@ class UpdateExamenParametroRequest extends FormRequest
         return [
             'examen_id' => 'examen',
             'nombre_parametro' => 'nombre del parámetro',
+            'seccion' => 'sección',
             'codigo_parametro' => 'código del parámetro',
             'tipo_dato' => 'tipo de dato',
             'unidad_medida' => 'unidad de medida',
@@ -94,6 +96,7 @@ class UpdateExamenParametroRequest extends FormRequest
             'examen_id.required' => 'El examen es obligatorio.',
             'examen_id.exists' => 'El examen seleccionado no existe.',
             'nombre_parametro.required' => 'El nombre del parámetro es obligatorio.',
+            'seccion.regex' => 'La sección solo puede contener letras y espacios.',
             'codigo_parametro.required' => 'El código del parámetro es obligatorio.',
             'codigo_parametro.regex' => 'El código solo puede contener letras mayúsculas, números y guiones bajos (sin espacios).',
             'codigo_parametro.unique' => 'Ya existe un parámetro con este código en el examen.',

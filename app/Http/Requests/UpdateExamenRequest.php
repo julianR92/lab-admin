@@ -15,15 +15,13 @@ class UpdateExamenRequest extends FormRequest
         return true;
     }
 
-     protected function prepareForValidation()
+    protected function prepareForValidation()
     {
         $this->merge([
             'status' => $this->has('status'),
             'requiere_ayuno' => $this->has('requiere_ayuno'),
         ]);
     }
-
-
 
     /**
      * Get the validation rules that apply to the request.
