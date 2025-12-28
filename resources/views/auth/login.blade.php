@@ -83,7 +83,7 @@
                     Recuérdame
                 </label>
             </div>
-            <a href="{{ route('forgot-password') }}" class="text-decoration-none" style="color: #667eea; font-size: 13px; font-weight: 600;">
+            <a href="{{ route('forgot-password') }}" class="text-decoration-none" style="color: #1e40af; font-size: 13px; font-weight: 600;">
                 ¿Olvidó su contraseña?
             </a>
         </div>

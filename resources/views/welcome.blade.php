@@ -19,7 +19,7 @@
                 font-family: 'Poppins', sans-serif;
             }
             body {
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
                 min-height: 100vh;
             }
             .hero-section {
@@ -43,7 +43,7 @@
             .feature-icon {
                 width: 70px;
                 height: 70px;
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
                 border-radius: 50%;
                 display: flex;
                 align-items: center;
@@ -53,7 +53,7 @@
                 margin: 0 auto 20px;
             }
             .btn-lab-primary {
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
                 border: none;
                 padding: 15px 40px;
                 font-size: 18px;
@@ -130,7 +130,7 @@
                             </div>
                         @else
                             <div class="logo-container mb-4">
-                                <i class="bi bi-hospital-fill" style="font-size: 80px; color: #667eea;"></i>
+                                <i class="bi bi-hospital-fill" style="font-size: 80px; color: #1e40af;"></i>
                             </div>
                         @endif
                         <h1 class="display-4 fw-bold mb-3" style="color: #2d3748;">
@@ -161,7 +161,7 @@
                             @endauth
                         </div>
                     </div>
-                    <div class="col-lg-6" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 60px 40px;">
+                    <div class="col-lg-6" style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); padding: 60px 40px;">
                         <h2 class="text-white fw-bold mb-4 text-center">Estadísticas</h2>
                         <div class="row text-center text-white">
                             <div class="col-6 mb-4">

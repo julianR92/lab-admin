@@ -20,7 +20,7 @@
         }
 
         body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
             min-height: 100vh;
             display: flex;
             align-items: center;
@@ -88,13 +88,13 @@
         .auth-logo {
             width: 80px;
             height: 80px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             margin: 0 auto 20px;
-            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+            box-shadow: 0 10px 30px rgba(30, 64, 175, 0.4);
         }
 
         .auth-logo i {
@@ -125,9 +125,9 @@
         }
 
         .form-control:focus, .form-select:focus {
-            border-color: #667eea;
+            border-color: #1e40af;
             background-color: white;
-            box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+            box-shadow: 0 0 0 0.2rem rgba(30, 64, 175, 0.25);
         }
 
         .form-label {
@@ -138,7 +138,7 @@
         }
 
         .btn-login {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
             border: none;
             border-radius: 10px;
             padding: 12px 24px;
@@ -152,9 +152,9 @@
 
         .btn-login:hover {
             transform: translateY(-2px);
-            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+            box-shadow: 0 10px 30px rgba(30, 64, 175, 0.4);
             color: white;
-            background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+            background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%);
         }
 
         .btn-login:active {
@@ -170,8 +170,8 @@
         }
 
         .form-check-input:checked {
-            background-color: #667eea;
-            border-color: #667eea;
+            background-color: #1e40af;
+            border-color: #1e40af;
         }
 
         .form-check-label {
@@ -194,14 +194,14 @@
         }
 
         .auth-footer a {
-            color: #667eea;
+            color: #1e40af;
             text-decoration: none;
             font-weight: 600;
             transition: color 0.3s ease;
         }
 
         .auth-footer a:hover {
-            color: #764ba2;
+            color: #3b82f6;
             text-decoration: underline;
         }
 
