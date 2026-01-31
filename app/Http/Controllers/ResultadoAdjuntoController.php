@@ -46,6 +46,15 @@ class ResultadoAdjuntoController extends Controller
             ], 403);
         }
 
+        // Verificar límite de 3 imágenes por examen
+        $cantidadActual = $servicioExamen->adjuntos()->count();
+        if ($cantidadActual >= 3) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Se ha alcanzado el límite máximo de 3 imágenes por examen',
+            ], 403);
+        }
+
         try {
             $archivo = $request->file('archivo');
 

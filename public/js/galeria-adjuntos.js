@@ -8,7 +8,7 @@ const GaleriaAdjuntos = {
     estadoExamen: null,
     archivosEnCola: [],
     adjuntosCargados: [],
-    maxArchivos: 20,
+    maxArchivos: 3,
     maxTamano: 10485760, // 10 MB en bytes
     formatosPermitidos: ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'],
     zoomLevel: 1,
@@ -115,6 +115,14 @@ const GaleriaAdjuntos = {
      * Agregar archivos a la cola
      */
     agregarArchivos(archivos) {
+        // Calcular cuántas imágenes se pueden agregar aún
+        const espacioDisponible = this.maxArchivos - this.adjuntosCargados.length - this.archivosEnCola.length;
+
+        if (espacioDisponible <= 0) {
+            this.mostrarNotificacion(`Ya se alcanzó el máximo de ${this.maxArchivos} imágenes por examen`, 'warning');
+            return;
+        }
+
         const archivosValidos = archivos.filter(archivo => {
             // Validar formato
             if (!this.formatosPermitidos.includes(archivo.type)) {
@@ -129,12 +137,6 @@ const GaleriaAdjuntos = {
                 return false;
             }
 
-            // Validar cantidad máxima
-            if (this.archivosEnCola.length + this.adjuntosCargados.length >= this.maxArchivos) {
-                this.mostrarNotificacion(`Máximo ${this.maxArchivos} imágenes permitidas`, 'warning');
-                return false;
-            }
-
             // Verificar duplicados
             const yaExiste = this.archivosEnCola.some(a => a.name === archivo.name && a.size === archivo.size);
             if (yaExiste) {
@@ -143,7 +145,11 @@ const GaleriaAdjuntos = {
             }
 
             return true;
-        });
+        }).slice(0, espacioDisponible); // Limitar al espacio disponible
+
+        if (archivosValidos.length < archivos.length) {
+            this.mostrarNotificacion(`Solo se pueden agregar ${espacioDisponible} imagen(es) más`, 'info');
+        }
 
         // Agregar archivos válidos a la cola
         archivosValidos.forEach(archivo => {

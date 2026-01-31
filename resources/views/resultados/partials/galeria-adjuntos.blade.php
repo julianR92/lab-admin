@@ -32,7 +32,7 @@
                     <p class="text-muted small mb-3">
                         Formatos permitidos: JPG, JPEG, PNG, GIF, WEBP<br>
                         Tamaño máximo: 10 MB por imagen<br>
-                        Máximo 20 imágenes
+                        Máximo 3 imágenes por examen
                     </p>
                     <input type="file"
                            id="file-input"
