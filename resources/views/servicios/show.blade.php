@@ -214,12 +214,15 @@
                                 <td>
                                     <div class="btn-group btn-group-sm">
                                         @if (in_array($servicioExamen->estado, ['PENDIENTE', 'EN_PROCESO']))
-                                            <button type="button" class="btn btn-primary" title="Capturar Resultados">
+                                            <a href="{{ route('resultados.create', $servicioExamen) }}" class="btn btn-primary" title="Capturar Resultados">
                                                 <i class="fas fa-edit"></i>
-                                            </button>
+                                            </a>
                                         @endif
 
                                         @if ($servicioExamen->estado == 'COMPLETADO')
+                                            <a href="{{ route('resultados.create', $servicioExamen) }}" class="btn btn-warning" title="Editar Resultados">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
                                             <form method="POST" action="{{ route('servicios.cambiar-estado', $servicioExamen) }}" class="d-inline">
                                                 @csrf
                                                 <input type="hidden" name="estado" value="VALIDADO">
@@ -243,9 +246,9 @@
                                         @endif
 
                                         @if (in_array($servicioExamen->estado, ['COMPLETADO', 'VALIDADO', 'ENTREGADO']))
-                                            <button type="button" class="btn btn-info" title="Ver Resultados">
+                                            <a href="{{ route('resultados.show', $servicioExamen) }}" class="btn btn-info" title="Ver Resultados">
                                                 <i class="fas fa-eye"></i>
-                                            </button>
+                                            </a>
                                         @endif
                                     </div>
                                 </td>
