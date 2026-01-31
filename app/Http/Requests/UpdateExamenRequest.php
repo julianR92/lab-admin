@@ -36,7 +36,7 @@ class UpdateExamenRequest extends FormRequest
             'nombre' => ['required', 'string', 'max:255'],
             'tipo_resultado' => [
                 'required',
-                'in:NUMERICO_SIMPLE,NUMERICO_CATEGORIZADO,CUALITATIVO_SIMPLE,CUALITATIVO_REACTIVO,CUALITATIVO_MULTIPLE_OPCIONES,MULTIPLE_CALCULADO,TABLA_HEMATOLOGIA,TEXTO_DESCRIPTIVO',
+                'in:NUMERICO_SIMPLE,NUMERICO_CATEGORIZADO,CUALITATIVO_SIMPLE,CUALITATIVO_MULTIPLE_OPCIONES,MULTIPLE_CALCULADO,TABLA_HEMATOLOGIA,TEXTO_DESCRIPTIVO',
             ],
             'unidad_medida' => ['nullable', 'string', 'max:50'],
             'tecnica' => ['nullable', 'string', 'max:255'],

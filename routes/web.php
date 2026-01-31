@@ -16,6 +16,7 @@ Route::post('/reset-password', [LoginController::class, 'resetPassword'])->name(
 
 Route::get('/', function () {
     $empresa = \App\Models\Empresa::first();
+
     return view('welcome', compact('empresa'));
 });
 
@@ -65,6 +66,11 @@ Route::middleware('auth')->group(function () {
     Route::post('servicios/{servicio}/pago', [\App\Http\Controllers\ServicioController::class, 'registrarPago'])->name('servicios.registrar-pago');
     Route::post('servicio-examen/{servicioExamen}/profesional', [\App\Http\Controllers\ServicioController::class, 'asignarProfesional'])->name('servicios.asignar-profesional');
     Route::post('servicio-examen/{servicioExamen}/estado', [\App\Http\Controllers\ServicioController::class, 'cambiarEstado'])->name('servicios.cambiar-estado');
+
+    // Rutas de Resultados de Exámenes
+    Route::get('servicio-examen/{servicioExamen}/resultados/create', [\App\Http\Controllers\ResultadoExamenController::class, 'create'])->name('resultados.create');
+    Route::post('servicio-examen/{servicioExamen}/resultados', [\App\Http\Controllers\ResultadoExamenController::class, 'store'])->name('resultados.store');
+    Route::get('servicio-examen/{servicioExamen}/resultados', [\App\Http\Controllers\ResultadoExamenController::class, 'show'])->name('resultados.show');
 
     // Rutas de Perfil
     Route::get('/perfil', [\App\Http\Controllers\PerfilController::class, 'edit'])->name('perfil.edit');

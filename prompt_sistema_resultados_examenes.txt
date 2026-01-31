@@ -1,0 +1,974 @@
+
+# 🎯 ESPECIFICACIONES TÉCNICAS: Sistema de Gestión de Resultados de Exámenes de Laboratorio
+
+## 📋 CONTEXTO DEL SISTEMA
+
+Estás desarrollando un módulo de captura, evaluación y gestión de resultados para un sistema de laboratorio clínico. El sistema debe manejar 8 tipos diferentes de exámenes con lógicas de captura y evaluación específicas para cada uno.
+
+---
+
+## 🗄️ ESTRUCTURA DE LA BASE DE DATOS
+
+### Tabla: `resultados_examen`
+
+```sql
+CREATE TABLE resultados_examen (
+    id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+    servicio_examen_id BIGINT UNSIGNED NOT NULL,
+    parametro_id BIGINT UNSIGNED NOT NULL,
+
+    -- Valores capturados (múltiples tipos)
+    valor_numerico DECIMAL(15,4) NULL,
+    valor_texto VARCHAR(500) NULL,
+    valor_cualitativo VARCHAR(100) NULL,
+    valor_fecha DATE NULL,
+    valor_hora TIME NULL,
+
+    unidad_medida VARCHAR(50) NULL,
+
+    -- Evaluación automática
+    fuera_rango BOOLEAN DEFAULT FALSE,
+    tipo_alerta ENUM('NORMAL', 'BAJO', 'ALTO', 'CRITICO') DEFAULT 'NORMAL',
+    categoria_asignada VARCHAR(100) NULL,
+
+    -- Valores de referencia aplicados
+    valor_referencia_id BIGINT UNSIGNED NULL,
+    rango_referencia VARCHAR(200) NULL,
+
+    -- Interpretación profesional
+    observaciones TEXT NULL,
+    interpretacion TEXT NULL,
+    conclusiones TEXT NULL,
+
+    -- Control de calidad
+    requiere_revision BOOLEAN DEFAULT FALSE,
+    revisado_por BIGINT UNSIGNED NULL,
+    fecha_revision DATETIME NULL,
+    comentario_revision TEXT NULL,
+
+    -- Validación
+    validado_por BIGINT UNSIGNED NULL,
+    fecha_validacion DATETIME NULL,
+
+    -- Auditoría
+    capturado_por BIGINT UNSIGNED NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (servicio_examen_id) REFERENCES servicio_examen(id) ON DELETE CASCADE,
+    FOREIGN KEY (parametro_id) REFERENCES examen_parametros(id),
+    FOREIGN KEY (valor_referencia_id) REFERENCES examen_valores_referencia(id),
+    UNIQUE KEY unique_resultado (servicio_examen_id, parametro_id)
+);
+```
+
+### Relaciones clave:
+
+1. **servicio_examen**: Contiene el examen solicitado en una orden
+   - Campo crítico: `procesado_por` (profesional asignado)
+   - Estado del examen: `estado` (PENDIENTE, EN_PROCESO, COMPLETADO, etc.)
+
+2. **examen_parametros**: Define los parámetros que se capturan
+   - `tipo_dato`: DECIMAL, INTEGER, TEXTO, TEXTO_LARGO, BOOLEAN, FECHA, HORA
+   - `es_calculado`: Si el valor se calcula automáticamente
+   - `formula_calculo`: JSON con la fórmula si es calculado
+   - `opciones_texto`: JSON con opciones predefinidas para cualitativos
+
+3. **examen_valores_referencia**: Rangos y categorías de referencia
+   - `tipo_referencia`: RANGO, CATEGORIZADO, CUALITATIVO
+   - Contexto: `genero`, `edad_min`, `edad_max`, `condicion_especial`
+   - Valores: `valor_min`, `valor_max`, `categoria`, `valor_cualitativo`
+
+---
+
+## 🎭 LOS 8 TIPOS DE EXÁMENES Y SU LÓGICA
+
+### 1. NUMERICO_SIMPLE
+**Ejemplo**: Glicemia, Creatinina, TSH
+
+**Características**:
+- 1 solo parámetro numérico
+- Evaluación: Comparar contra rango (valor_min - valor_max)
+- Sin categorías
+
+**Lógica de captura**:
+```
+1. Validar que hay profesional asignado (procesado_por != NULL)
+2. Capturar: valor_numerico
+3. Auto-evaluar:
+   - Si valor < valor_min → tipo_alerta = 'BAJO', fuera_rango = true
+   - Si valor > valor_max → tipo_alerta = 'ALTO', fuera_rango = true
+   - Si está en rango → tipo_alerta = 'NORMAL', fuera_rango = false
+4. Guardar rango_referencia para el PDF
+5. Si tipo_alerta = 'CRITICO', marcar requiere_revision = true
+```
+
+---
+
+### 2. NUMERICO_CATEGORIZADO
+**Ejemplo**: Colesterol Total, Triglicéridos, Índice VIH
+
+**Características**:
+- 1 parámetro numérico
+- Múltiples rangos con categorías (Óptimo, Alto, Reactivo, No Reactivo)
+- El valor determina en qué categoría cae
+
+**Lógica de captura**:
+```
+1. Validar profesional asignado
+2. Capturar: valor_numerico
+3. Buscar valores_referencia ordenados por 'orden'
+4. Iterar hasta encontrar el rango donde cae el valor:
+   - Si valor <= valor_max del rango → Asignar esa categoría
+5. Guardar:
+   - categoria_asignada (ej: "Intermedio Alto")
+   - valor_referencia_id
+   - rango_referencia (ej: "200-239 mg/dL - Intermedio Alto")
+6. Determinar tipo_alerta según categoría:
+   - Óptimo/Normal → NORMAL
+   - Limítrofe/Intermedio → ALTO
+   - Alto/Muy Alto → CRITICO
+7. Si no es NORMAL → fuera_rango = true
+```
+
+**Ejemplo práctico**: Colesterol = 215
+```
+Rangos:
+- <199: Óptimo (NORMAL)
+- 200-239: Intermedio Alto (ALTO) ← 215 cae aquí
+- ≥240: Alto (CRITICO)
+
+Resultado:
+- valor_numerico = 215
+- categoria_asignada = "Intermedio Alto"
+- tipo_alerta = "ALTO"
+- fuera_rango = true
+```
+
+---
+
+### 3. MULTIPLE_SIMPLE
+**Ejemplo**: Perfil Lipídico (Colesterol Total, HDL, LDL, Triglicéridos)
+
+**Características**:
+- 2-6 parámetros numéricos independientes
+- Cada uno se evalúa individualmente
+- Sin cálculos entre ellos
+
+**Lógica de captura**:
+```
+1. Validar profesional asignado
+2. Obtener todos los parámetros del examen
+3. Para cada parámetro:
+   a. Crear registro en resultados_examen
+   b. Capturar valor_numerico
+   c. Evaluar contra su valor_referencia específico
+   d. Guardar fuera_rango, tipo_alerta, rango_referencia
+4. Calcular resumen del examen:
+   - Total de parámetros capturados
+   - Cantidad de anomalías (fuera_rango)
+5. Si algún parámetro es CRITICO → Marcar servicio_examen.requiere_revision
+```
+
+---
+
+### 4. MULTIPLE_CALCULADO
+**Ejemplo**: Microalbuminuria (Creatinina + Albúmina = Relación calculada)
+
+**Características**:
+- 2+ parámetros capturados manualmente
+- 1+ parámetros calculados automáticamente
+- Los calculados usan fórmulas matemáticas
+
+**Lógica de captura**:
+```
+1. Validar profesional asignado
+2. Obtener parámetros del examen, separar:
+   - Manuales: es_calculado = false
+   - Calculados: es_calculado = true
+3. Capturar parámetros manuales primero
+4. Para cada parámetro calculado:
+   a. Obtener formula_calculo JSON:
+      {
+        "formula": "(ALB_ORINA / CREAT_ORINA) * 10",
+        "parametros": ["ALB_ORINA", "CREAT_ORINA"]
+      }
+   b. Reemplazar códigos de parámetros por valores capturados:
+      "(15.2 / 85.5) * 10"
+   c. Evaluar expresión matemática → 1.78
+   d. Guardar valor_numerico = 1.78
+5. Evaluar todos los parámetros (manuales + calculados)
+6. Validar que todos los parámetros necesarios fueron capturados
+   antes de calcular
+```
+
+**IMPORTANTE**: 
+- No permitir guardar si faltan parámetros manuales
+- Los calculados NO se pueden editar manualmente
+- Recalcular automáticamente si se edita un parámetro manual
+
+---
+
+### 5. CUALITATIVO_SIMPLE
+**Ejemplo**: Dengue IgM, Prueba de Embarazo, Grupo Sanguíneo
+
+**Características**:
+- 1-2 parámetros con valores predefinidos
+- Opciones limitadas (Positivo/Negativo, Reactivo/No Reactivo)
+- Sin valores numéricos
+
+**Lógica de captura**:
+```
+1. Validar profesional asignado
+2. Obtener opciones_texto del parámetro:
+   ["Reactivo", "No Reactivo", "Indeterminado"]
+3. Mostrar selector con opciones predefinidas
+4. Capturar: valor_cualitativo
+5. Evaluar contra valor_referencia:
+   - Si valor_cualitativo == valor_esperado → tipo_alerta = 'NORMAL'
+   - Si valor_cualitativo != valor_esperado → tipo_alerta = 'ALTO'
+6. Ejemplo Dengue:
+   - valor_esperado = "No Reactivo"
+   - Si capturado = "Reactivo" → tipo_alerta = 'ALTO', fuera_rango = true
+```
+
+---
+
+### 6. CUALITATIVO_MULTIPLE_OPCIONES
+**Ejemplo**: Uroanalisis (Color, Aspecto, pH, Leucocitos, etc.)
+
+**Características**:
+- 10-20 parámetros cualitativos
+- Cada parámetro tiene opciones predefinidas
+- Algunos son texto, otros son selección
+
+**Lógica de captura**:
+```
+1. Validar profesional asignado
+2. Para cada parámetro:
+   a. Verificar tipo_dato:
+      - Si tiene opciones_texto → Mostrar select/radio
+      - Si es TEXTO → Input text
+      - Si es TEXTO_LARGO → Textarea
+   b. Capturar en valor_texto o valor_cualitativo
+3. Evaluar cada parámetro:
+   - Parámetros con valores "normales" esperados
+   - Si difiere → marcar anomalía
+4. Ejemplo:
+   - Color: ["Amarillo", "Amarillo Claro", "Ámbar", "Rojo"]
+   - Aspecto: ["Transparente", "Ligeramente Turbio", "Turbio"]
+   - Leucocitos: ["Negativo", "+", "++", "+++"]
+```
+
+---
+
+### 7. TABLA_HEMATOLOGICA
+**Ejemplo**: Hemograma Completo (20-30 parámetros numéricos)
+
+**Características**:
+- 15-30+ parámetros numéricos
+- Agrupados en secciones (Serie Roja, Serie Blanca, Plaquetas)
+- Presentación tabular en resultados
+
+**Lógica de captura**:
+```
+1. Validar profesional asignado
+2. Obtener parámetros agrupados por campo 'grupo':
+   - Serie Blanca: WBC, LYMPH, MONO, etc.
+   - Serie Roja: RBC, HGB, HCT, MCV, etc.
+   - Plaquetas: PLT, MPV, PDW, etc.
+3. Presentar formulario organizado por grupos
+4. Capturar todos los parámetros (20+ valores)
+5. Evaluar cada parámetro individualmente contra su rango
+6. Permitir captura parcial con guardado progresivo
+7. Calcular porcentaje de completado:
+   (parametros_capturados / total_parametros) * 100
+8. Solo marcar como COMPLETADO cuando todos estén capturados
+```
+
+**Consideraciones especiales**:
+- Permitir guardar sin completar todo (estado EN_PROCESO)
+- Mostrar progreso visual
+- Validar que valores sean coherentes entre sí
+- Algunos equipos pueden importar resultados automáticamente
+
+---
+
+### 8. TEXTO_DESCRIPTIVO
+**Ejemplo**: Baciloscopia, Coloración de Gram, Urocultivo, Extendido Sangre Periférica
+
+**Características**:
+- Campos estructurados + texto libre
+- Observaciones narrativas del profesional
+- Interpretación microscópica
+
+**Lógica de captura**:
+```
+1. Validar profesional asignado
+2. Presentar formulario con 3 áreas:
+
+   a. Campos estructurados (si existen):
+      - Tipo de muestra (select)
+      - Calidad de muestra (select)
+      - Método/Técnica (readonly)
+
+   b. Observaciones (textarea):
+      - Descripción de lo observado
+      - Características de la muestra
+
+   c. Interpretación (textarea):
+      - Hallazgos significativos
+      - Descripción microscópica detallada
+
+   d. Conclusiones (textarea):
+      - Resultado final
+      - Recomendaciones
+
+3. Capturar:
+   - Campos estructurados → valor_texto
+   - Observaciones → observaciones
+   - Interpretación → interpretacion
+   - Conclusiones → conclusiones
+
+4. NO evaluar automáticamente (no hay fuera_rango)
+5. Siempre marcar requiere_revision = true (profesional debe validar)
+```
+
+**Ejemplo Baciloscopia**:
+```
+valor_texto = "ESPUTO"
+observaciones = "Tipo de muestra: Esputo. Calidad: Saliva"
+interpretacion = "No se observan Bacilos Ácido Alcohol Resistentes en más de 100 campos microscópicos observados."
+conclusiones = "NEGATIVO para BAAR. Sensibilidad: 40-60%. Técnica: Coloración de ZIEHL NEELSEN"
+requiere_revision = true
+```
+
+---
+
+## ⚠️ VALIDACIONES CRÍTICAS OBLIGATORIAS
+
+### 1. Validación de Profesional Asignado
+
+**REGLA**: No se pueden capturar resultados si no hay un profesional asignado.
+
+```php
+// ANTES de mostrar formulario de captura
+if (!$servicioExamen->procesado_por) {
+    return response()->json([
+        'error' => true,
+        'message' => 'No se puede capturar resultados. Debe asignar un profesional al examen primero.'
+    ], 422);
+}
+
+// El profesional se asigna desde la gestión de órdenes:
+$servicioExamen->update([
+    'procesado_por' => $userId,
+    'estado' => 'EN_PROCESO',
+    'fecha_procesamiento' => now()
+]);
+```
+
+### 2. Validación de Estado del Examen
+
+```php
+// Solo permitir captura en estos estados:
+$estadosPermitidos = ['EN_PROCESO', 'COMPLETADO'];
+
+if (!in_array($servicioExamen->estado, $estadosPermitidos)) {
+    return error('El examen debe estar EN_PROCESO para capturar resultados');
+}
+
+// No permitir edición si está ENTREGADO
+if ($servicioExamen->estado === 'ENTREGADO') {
+    return error('No se puede modificar un examen ya entregado');
+}
+```
+
+### 3. Validación de Duplicados
+
+```php
+// No permitir resultados duplicados para el mismo parámetro
+$existe = ResultadoExamen::where('servicio_examen_id', $servicioExamenId)
+    ->where('parametro_id', $parametroId)
+    ->exists();
+
+if ($existe) {
+    return error('Ya existe un resultado para este parámetro. Use la función de editar.');
+}
+```
+
+### 4. Validación de Valores según Tipo de Dato
+
+```php
+// Para DECIMAL/INTEGER
+if ($parametro->es_numerico) {
+    if (!is_numeric($valor)) {
+        return error('El valor debe ser numérico');
+    }
+
+    if ($parametro->valor_minimo !== null && $valor < $parametro->valor_minimo) {
+        return warning('El valor es menor al mínimo permitido');
+    }
+
+    if ($parametro->valor_maximo !== null && $valor > $parametro->valor_maximo) {
+        return warning('El valor es mayor al máximo permitido');
+    }
+}
+
+// Para opciones predefinidas
+if ($parametro->tiene_opciones) {
+    if (!in_array($valor, $parametro->opciones_texto)) {
+        return error('Debe seleccionar una opción válida');
+    }
+}
+```
+
+### 5. Validación de Parámetros Requeridos
+
+```php
+// Para exámenes MULTIPLE_CALCULADO
+// No permitir guardar si faltan parámetros manuales
+$parametrosManuales = $examen->parametros()
+    ->where('es_calculado', false)
+    ->where('requerido', true)
+    ->get();
+
+$capturados = ResultadoExamen::where('servicio_examen_id', $id)
+    ->whereIn('parametro_id', $parametrosManuales->pluck('id'))
+    ->count();
+
+if ($capturados < $parametrosManuales->count()) {
+    return error('Debe capturar todos los parámetros requeridos antes de calcular');
+}
+```
+
+---
+
+## 🔄 FLUJO COMPLETO DE CAPTURA DE RESULTADOS
+
+### PASO 1: Validaciones Previas
+
+```
+1. Verificar que servicio_examen.procesado_por != NULL
+   → Si NULL: Mostrar mensaje "Asigne un profesional primero"
+
+2. Verificar estado del examen
+   → Si PENDIENTE: Cambiar a EN_PROCESO automáticamente
+   → Si CANCELADO: No permitir captura
+   → Si ENTREGADO: Solo lectura
+
+3. Obtener datos del paciente para contexto:
+   - Género
+   - Edad (calcular desde fecha_nacimiento)
+   - Condición especial (embarazada, diabético, etc.)
+```
+
+### PASO 2: Cargar Configuración del Examen
+
+```
+1. Obtener examen.tipo_resultado
+2. Cargar parámetros según tipo:
+   - Si MULTIPLE_*: Cargar todos los parámetros
+   - Si TABLA_HEMATOLOGICA: Agrupar por 'grupo'
+   - Si CALCULADO: Separar manuales de calculados
+3. Cargar valores_referencia aplicables al contexto del paciente
+```
+
+### PASO 3: Renderizar Formulario Dinámico
+
+```
+Según tipo_resultado, mostrar:
+
+NUMERICO_SIMPLE:
+  → 1 input number con unidad
+
+NUMERICO_CATEGORIZADO:
+  → 1 input number + Preview de categoría en tiempo real
+
+MULTIPLE_SIMPLE / MULTIPLE_CALCULADO:
+  → Grid con múltiples inputs
+  → Calculados en readonly (se actualizan automáticamente)
+
+CUALITATIVO_SIMPLE / CUALITATIVO_MULTIPLE_OPCIONES:
+  → Selects, radios o checkboxes según opciones
+
+TABLA_HEMATOLOGICA:
+  → Tabla con secciones colapsables
+  → Indicador de progreso
+  → Botón "Guardar y continuar"
+
+TEXTO_DESCRIPTIVO:
+  → Textareas grandes
+  → Editor de texto rico (opcional)
+```
+
+### PASO 4: Captura y Validación
+
+```
+1. Validar formato de datos
+2. Validar rangos permitidos
+3. Guardar en resultados_examen:
+   - valor_numerico / valor_texto / valor_cualitativo
+   - unidad_medida
+   - capturado_por = Auth::user()->id
+```
+
+### PASO 5: Evaluación Automática
+
+```
+1. Obtener valor_referencia aplicable:
+   WHERE parametro_id = X
+   AND (genero IS NULL OR genero = 'F')
+   AND (edad_min IS NULL OR edad_min <= 45)
+   AND (edad_max IS NULL OR edad_max >= 45)
+   ORDER BY orden ASC
+   LIMIT 1
+
+2. Evaluar según tipo_referencia:
+
+   RANGO:
+     - valor < valor_min → BAJO
+     - valor > valor_max → ALTO
+     - dentro del rango → NORMAL
+
+   CATEGORIZADO:
+     - Buscar categoría donde valor cae
+     - Asignar categoria_asignada
+     - Determinar tipo_alerta según categoría
+
+   CUALITATIVO:
+     - valor == valor_esperado → NORMAL
+     - valor != valor_esperado → ALTO
+
+3. Guardar evaluación:
+   - fuera_rango
+   - tipo_alerta
+   - categoria_asignada
+   - valor_referencia_id
+   - rango_referencia (texto para PDF)
+```
+
+### PASO 6: Post-Procesamiento
+
+```
+1. Si tipo_alerta = 'CRITICO':
+   → requiere_revision = true
+   → Notificar al profesional validador
+
+2. Si examen es MULTIPLE_* o TABLA_HEMATOLOGICA:
+   → Verificar si todos los parámetros están capturados
+   → Actualizar porcentaje de completado
+   → Si 100% → Cambiar estado a COMPLETADO
+
+3. Si tipo = TEXTO_DESCRIPTIVO:
+   → Siempre requiere_revision = true
+
+4. Calcular parámetros calculados si aplica
+
+5. Actualizar fecha_resultado del servicio_examen
+```
+
+### PASO 7: Notificaciones y Alertas
+
+```
+1. Si hay resultados CRITICOS:
+   → Enviar notificación inmediata al médico validador
+   → Registrar en log de eventos críticos
+
+2. Si requiere_revision:
+   → Agregar a cola de revisión
+
+3. Si examen está COMPLETADO:
+   → Notificar al coordinador
+   → Disponible para validación final
+```
+
+---
+
+## 🎨 INTERFAZ DE USUARIO RECOMENDADA
+
+### Vista de Lista de Exámenes Pendientes
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ EXÁMENES PENDIENTES DE CAPTURA                               │
+├──────────┬──────────────┬────────────┬──────────┬──────────┤
+│ PACIENTE │ EXAMEN       │ PROFESIONAL│ ESTADO   │ ACCIÓN   │
+├──────────┼──────────────┼────────────┼──────────┼──────────┤
+│ Juan P.  │ Hemograma    │ Dr. López  │ 60%      │ [Capturar]│
+│ María G. │ Glicemia     │ Sin asignar│ PENDIENTE│ [Asignar]│
+│ Pedro R. │ Uroanalisis  │ Dra. Ruiz  │ Completo │ [Ver]    │
+└──────────┴──────────────┴────────────┴──────────┴──────────┘
+
+Filtros:
+[Estado ▼] [Tipo Examen ▼] [Profesional ▼] [Buscar...]
+```
+
+### Formulario de Captura - NUMERICO_SIMPLE
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ CAPTURA DE RESULTADOS: GLICEMIA                              │
+│                                                              │
+│ Paciente: Juan Pérez (45 años, M)                           │
+│ Profesional: Dr. Carlos López                                │
+│ Fecha: 29/01/2026 22:30                                      │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│ Glucosa                                                      │
+│ ┌────────┐ mg/dL                                           │
+│ │  95.5  │                                                  │
+│ └────────┘                                                  │
+│ Rango: 70 - 110 mg/dL                                       │
+│ Estado: ✓ NORMAL                                            │
+│                                                              │
+│ [Guardar] [Cancelar]                                        │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Formulario de Captura - TABLA_HEMATOLOGICA
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ CAPTURA DE RESULTADOS: HEMOGRAMA III                         │
+│                                                              │
+│ Progreso: ████████████░░░░░░ 60% (12/20 parámetros)         │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│ ▼ SERIE BLANCA                                              │
+│   ┌────────────────────┬──────────┬─────────┬──────────┐   │
+│   │ PARÁMETRO          │ VALOR    │ UNIDAD  │ ESTADO   │   │
+│   ├────────────────────┼──────────┼─────────┼──────────┤   │
+│   │ WBC                │ [  6.5 ] │ 10⁹/L   │ ✓ Normal │   │
+│   │ LYMPH#             │ [  2.1 ] │ 10⁹/L   │ ✓ Normal │   │
+│   │ LYMPH%             │ [ 32.3 ] │ %       │ ✓ Normal │   │
+│   └────────────────────┴──────────┴─────────┴──────────┘   │
+│                                                              │
+│ ▼ SERIE ROJA                                                │
+│   ┌────────────────────┬──────────┬─────────┬──────────┐   │
+│   │ RBC                │ [ 4.59 ] │ 10¹²/L  │ ✓ Normal │   │
+│   │ HGB                │ [ 14.2 ] │ g/dL    │ ↑ Alto   │   │
+│   │ HCT                │ [      ] │ %       │ -        │   │
+│   └────────────────────┴──────────┴─────────┴──────────┘   │
+│                                                              │
+│ [Guardar y Continuar] [Guardar Todo] [Cancelar]            │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Formulario de Captura - TEXTO_DESCRIPTIVO
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ CAPTURA DE RESULTADOS: BACILOSCOPIA                          │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│ Tipo de Muestra                                              │
+│ [ESPUTO ▼]                                                  │
+│                                                              │
+│ Calidad de la Muestra                                        │
+│ [SALIVA ▼]                                                  │
+│                                                              │
+│ Observaciones                                                │
+│ ┌─────────────────────────────────────────────────────────┐ │
+│ │ Muestra de esputo matutino. Calidad aceptable.          │ │
+│ │ Se realizaron 3 baciloscopias.                           │ │
+│ └─────────────────────────────────────────────────────────┘ │
+│                                                              │
+│ Interpretación                                               │
+│ ┌─────────────────────────────────────────────────────────┐ │
+│ │ No se observan Bacilos Ácido Alcohol Resistentes        │ │
+│ │ en más de 100 campos microscópicos observados.           │ │
+│ │ Técnica: Coloración de ZIEHL NEELSEN                     │ │
+│ └─────────────────────────────────────────────────────────┘ │
+│                                                              │
+│ Conclusiones                                                 │
+│ ┌─────────────────────────────────────────────────────────┐ │
+│ │ NEGATIVO para BAAR.                                      │ │
+│ │ Sensibilidad del método: 40-60%                          │ │
+│ └─────────────────────────────────────────────────────────┘ │
+│                                                              │
+│ ⚠ Este resultado requiere validación del profesional       │
+│                                                              │
+│ [Guardar] [Cancelar]                                        │
+└─────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 📊 CASOS DE USO ESPECÍFICOS
+
+### Caso 1: Captura de Hemograma (guardado progresivo)
+
+```
+Escenario:
+- El técnico comienza a capturar el Hemograma
+- El equipo analizador genera solo 10 de 20 parámetros
+- El técnico guarda parcialmente
+
+Comportamiento esperado:
+1. Permitir guardar con parámetros faltantes
+2. Estado = EN_PROCESO (no COMPLETADO)
+3. Mostrar progreso: "10/20 parámetros (50%)"
+4. Permitir volver a editar después
+5. Solo marcar COMPLETADO cuando todos estén capturados
+```
+
+### Caso 2: Edición de Resultados
+
+```
+Escenario:
+- Un resultado ya capturado tiene un error
+- El profesional necesita corregirlo
+
+Comportamiento esperado:
+1. Verificar que examen no esté ENTREGADO
+2. Permitir edición solo si:
+   - Usuario es el que capturó (capturado_por)
+   - O usuario tiene permiso de supervisión
+3. Registrar cambio en auditoría
+4. Re-evaluar automáticamente después de editar
+5. Si cambia de NORMAL a CRITICO → marcar requiere_revision
+```
+
+### Caso 3: Resultado Crítico Detectado
+
+```
+Escenario:
+- Glucosa = 350 mg/dL (valor crítico alto)
+
+Comportamiento esperado:
+1. Al guardar, detectar que está fuera de rango crítico
+2. Marcar:
+   - fuera_rango = true
+   - tipo_alerta = 'CRITICO'
+   - requiere_revision = true
+3. Mostrar alerta al técnico:
+   "⚠ VALOR CRÍTICO DETECTADO: 350 mg/dL (Rango: 70-110)"
+4. Enviar notificación push al profesional validador
+5. Agregar a lista de pendientes de revisión prioritaria
+6. No permitir marcar como ENTREGADO hasta que sea revisado
+```
+
+### Caso 4: Cálculo Automático (Microalbuminuria)
+
+```
+Escenario:
+- Capturar Creatinina = 85.5 mg/dL
+- Capturar Albúmina = 15.2 mg/dL
+- Calcular Relación Albúmina/Creatinina
+
+Comportamiento esperado:
+1. Guardar Creatinina → resultado_1
+2. Guardar Albúmina → resultado_2
+3. Detectar que hay un parámetro calculado pendiente
+4. Ejecutar cálculo:
+   formula = "(ALB_ORINA / CREAT_ORINA) * 10"
+   valores = {ALB_ORINA: 15.2, CREAT_ORINA: 85.5}
+   resultado = (15.2 / 85.5) * 10 = 1.78
+5. Guardar resultado_3 con valor_numerico = 1.78
+6. Evaluar el parámetro calculado
+7. Mostrar los 3 resultados en la UI
+```
+
+---
+
+## 🔐 PERMISOS Y ROLES
+
+### Roles del Sistema
+
+1. **Técnico de Laboratorio**
+   - Puede capturar resultados
+   - Puede editar sus propios resultados (si no están validados)
+   - NO puede validar resultados
+
+2. **Profesional de Laboratorio** (Bacteriólogo/a)
+   - Puede capturar resultados
+   - Puede ser asignado como procesado_por
+   - Puede revisar y validar resultados
+   - Puede editar cualquier resultado no entregado
+
+3. **Coordinador de Laboratorio**
+   - Acceso completo
+   - Asigna profesionales a exámenes
+   - Puede autorizar entrega de resultados
+
+### Validaciones de Permisos
+
+```php
+// Antes de capturar
+if (!auth()->user()->can('capturar_resultados')) {
+    abort(403, 'No tiene permisos para capturar resultados');
+}
+
+// Antes de editar
+if ($resultado->capturado_por !== auth()->id() && 
+    !auth()->user()->hasRole('coordinador')) {
+    abort(403, 'Solo puede editar sus propios resultados');
+}
+
+// Antes de validar
+if (!auth()->user()->can('validar_resultados')) {
+    abort(403, 'No tiene permisos para validar resultados');
+}
+```
+
+---
+
+## 📤 RESPUESTAS DE LA API
+
+### Éxito al Guardar
+
+```json
+{
+  "success": true,
+  "message": "Resultado guardado correctamente",
+  "data": {
+    "resultado_id": 1234,
+    "valor_formateado": "95.5 mg/dL",
+    "evaluacion": {
+      "fuera_rango": false,
+      "tipo_alerta": "NORMAL",
+      "rango_referencia": "70 - 110 mg/dL"
+    },
+    "progreso": {
+      "capturados": 1,
+      "total": 1,
+      "porcentaje": 100
+    }
+  }
+}
+```
+
+### Alerta de Valor Crítico
+
+```json
+{
+  "success": true,
+  "message": "Resultado guardado",
+  "warnings": [
+    {
+      "tipo": "VALOR_CRITICO",
+      "mensaje": "⚠ Valor crítico detectado: 350 mg/dL (Rango normal: 70-110)",
+      "parametro": "Glucosa",
+      "requiere_revision": true
+    }
+  ],
+  "data": { ... }
+}
+```
+
+### Error de Validación
+
+```json
+{
+  "success": false,
+  "error": "PROFESIONAL_NO_ASIGNADO",
+  "message": "No se puede capturar resultados. Debe asignar un profesional al examen primero.",
+  "details": {
+    "servicio_examen_id": 123,
+    "procesado_por": null
+  }
+}
+```
+
+---
+
+## 🧪 TESTING - Casos de Prueba
+
+### Test 1: Validación de Profesional Asignado
+
+```php
+public function test_no_permite_capturar_sin_profesional_asignado()
+{
+    $servicioExamen = ServicioExamen::factory()->create([
+        'procesado_por' => null
+    ]);
+
+    $response = $this->post("/resultados/{$servicioExamen->id}", [
+        'parametro_id' => 1,
+        'valor_numerico' => 95.5
+    ]);
+
+    $response->assertStatus(422);
+    $response->assertJson(['error' => 'PROFESIONAL_NO_ASIGNADO']);
+}
+```
+
+### Test 2: Evaluación Automática de Rangos
+
+```php
+public function test_evalua_valor_fuera_de_rango_correctamente()
+{
+    $resultado = ResultadoExamen::crearYEvaluar([
+        'servicio_examen_id' => 1,
+        'parametro_id' => 5, // Glucosa
+        'valor_numerico' => 350 // Valor crítico alto
+    ], ['genero' => 'M', 'edad' => 45]);
+
+    $this->assertTrue($resultado->fuera_rango);
+    $this->assertEquals('CRITICO', $resultado->tipo_alerta);
+    $this->assertTrue($resultado->requiere_revision);
+}
+```
+
+### Test 3: Cálculo Automático
+
+```php
+public function test_calcula_parametros_automaticamente()
+{
+    // Crear parámetros manuales
+    $creatinina = ResultadoExamen::create([...]);
+    $albumina = ResultadoExamen::create([...]);
+
+    // Ejecutar cálculo
+    $service = new ResultadoService();
+    $calculado = $service->calcularParametro($parametroCalculadoId);
+
+    $this->assertEquals(1.78, $calculado->valor_numerico);
+}
+```
+
+---
+
+## 🎯 OBJETIVO FINAL
+
+Implementar un sistema robusto de captura y evaluación de resultados que:
+
+✅ Valide que hay un profesional asignado antes de permitir captura
+✅ Maneje los 8 tipos de exámenes con lógicas específicas
+✅ Evalúe automáticamente contra valores de referencia contextualizados
+✅ Detecte y marque valores críticos para revisión
+✅ Calcule parámetros derivados automáticamente
+✅ Mantenga trazabilidad completa (quién, cuándo, qué)
+✅ Genere alertas y notificaciones apropiadas
+✅ Permita guardado progresivo en exámenes complejos
+✅ Facilite revisión y validación por profesionales
+✅ Proporcione datos listos para generación de PDF
+
+---
+
+## 📚 ENTREGABLES ESPERADOS
+
+1. **Controller**: `ResultadoExamenController.php`
+   - store(): Crear resultado
+   - update(): Editar resultado
+   - calcular(): Calcular parámetros derivados
+   - revisar(): Marcar como revisado
+   - validar(): Validar resultado
+
+2. **Service**: `ResultadoExamenService.php`
+   - evaluarResultado(): Lógica de evaluación
+   - calcularParametro(): Ejecutar fórmulas
+   - validarProfesionalAsignado(): Verificar asignación
+   - notificarCritico(): Enviar alertas
+
+3. **Requests**: 
+   - `StoreResultadoRequest.php`
+   - `UpdateResultadoRequest.php`
+
+4. **Resources**:
+   - `ResultadoExamenResource.php`
+
+5. **Tests**:
+   - `ResultadoExamenTest.php`
+   - `EvaluacionAutomaticaTest.php`

@@ -114,4 +114,224 @@ class ExamenValorReferencia extends Model
 
         return $aplicaGenero && $aplicaEdadMin && $aplicaEdadMax;
     }
+
+    /**
+     * Evaluar un valor contra este valor de referencia
+     */
+    public function evaluarValor($valor): array
+    {
+        $resultado = [
+            'dentro_rango' => true,
+            'tipo_alerta' => 'NORMAL',
+            'categoria' => null,
+        ];
+
+        switch ($this->tipo_referencia) {
+            case 'RANGO':
+                $resultado = $this->evaluarRango($valor);
+                break;
+
+            case 'CATEGORIZADO':
+                $resultado = $this->evaluarCategorizado($valor);
+                break;
+
+            case 'CUALITATIVO':
+                $resultado = $this->evaluarCualitativo($valor);
+                break;
+
+            case 'INFORMATIVO':
+                // Los valores informativos no generan alertas
+                $resultado['dentro_rango'] = true;
+                $resultado['tipo_alerta'] = 'NORMAL';
+                break;
+        }
+
+        return $resultado;
+    }
+
+    /**
+     * Evaluar valor contra un rango numérico
+     */
+    private function evaluarRango($valor): array
+    {
+        $resultado = [
+            'dentro_rango' => true,
+            'tipo_alerta' => 'NORMAL',
+            'categoria' => null,
+        ];
+
+        if (! is_numeric($valor)) {
+            return $resultado;
+        }
+
+        // Verificar si está fuera del rango
+        if ($this->valor_min !== null && $valor < $this->valor_min) {
+            $resultado['dentro_rango'] = false;
+            $resultado['tipo_alerta'] = 'BAJO';
+
+            // Verificar si es crítico (muy por debajo)
+            $diferencia = (($this->valor_min - $valor) / $this->valor_min) * 100;
+            if ($diferencia > 30) {
+                $resultado['tipo_alerta'] = 'CRITICO';
+            }
+        } elseif ($this->valor_max !== null && $valor > $this->valor_max) {
+            $resultado['dentro_rango'] = false;
+            $resultado['tipo_alerta'] = 'ALTO';
+
+            // Verificar si es crítico (muy por encima)
+            $diferencia = (($valor - $this->valor_max) / $this->valor_max) * 100;
+            if ($diferencia > 30) {
+                $resultado['tipo_alerta'] = 'CRITICO';
+            }
+        }
+
+        return $resultado;
+    }
+
+    /**
+     * Evaluar valor categorizado (ej: Colesterol)
+     */
+    private function evaluarCategorizado($valor): array
+    {
+        $resultado = [
+            'dentro_rango' => true,
+            'tipo_alerta' => 'NORMAL',
+            'categoria' => $this->categoria,
+        ];
+
+        if (! is_numeric($valor)) {
+            return $resultado;
+        }
+
+        // Verificar si el valor cae en esta categoría
+        $dentroDeLaCategoria = true;
+
+        if ($this->operador) {
+            // Usar operador si está definido
+            switch ($this->operador) {
+                case '<':
+                    $dentroDeLaCategoria = $valor < $this->valor_max;
+                    break;
+                case '<=':
+                    $dentroDeLaCategoria = $valor <= $this->valor_max;
+                    break;
+                case '>':
+                    $dentroDeLaCategoria = $valor > $this->valor_min;
+                    break;
+                case '>=':
+                    $dentroDeLaCategoria = $valor >= $this->valor_min;
+                    break;
+                case '==':
+                    $dentroDeLaCategoria = $valor == $this->valor_min;
+                    break;
+            }
+        } else {
+            // Usar rango si no hay operador
+            if ($this->valor_min !== null && $valor < $this->valor_min) {
+                $dentroDeLaCategoria = false;
+            }
+            if ($this->valor_max !== null && $valor > $this->valor_max) {
+                $dentroDeLaCategoria = false;
+            }
+        }
+
+        if ($dentroDeLaCategoria) {
+            // Determinar tipo de alerta según la categoría
+            $categoriaLower = strtolower($this->categoria ?? '');
+
+            if (str_contains($categoriaLower, 'crítico') || str_contains($categoriaLower, 'critico') ||
+                str_contains($categoriaLower, 'muy alto') || str_contains($categoriaLower, 'severo')) {
+                $resultado['tipo_alerta'] = 'CRITICO';
+                $resultado['dentro_rango'] = false;
+            } elseif (str_contains($categoriaLower, 'alto') || str_contains($categoriaLower, 'elevado') ||
+                      str_contains($categoriaLower, 'intermedio')) {
+                $resultado['tipo_alerta'] = 'ALTO';
+                $resultado['dentro_rango'] = false;
+            } elseif (str_contains($categoriaLower, 'bajo') || str_contains($categoriaLower, 'límite')) {
+                $resultado['tipo_alerta'] = 'BAJO';
+                $resultado['dentro_rango'] = false;
+            } else {
+                // Categorías óptimas/normales
+                $resultado['tipo_alerta'] = 'NORMAL';
+                $resultado['dentro_rango'] = true;
+            }
+        }
+
+        return $resultado;
+    }
+
+    /**
+     * Evaluar valor cualitativo
+     */
+    private function evaluarCualitativo($valor): array
+    {
+        $resultado = [
+            'dentro_rango' => true,
+            'tipo_alerta' => 'NORMAL',
+            'categoria' => null,
+        ];
+
+        // Comparar valor con el esperado
+        if ($this->valor_cualitativo && $valor !== $this->valor_cualitativo) {
+            $resultado['dentro_rango'] = false;
+
+            // Determinar severidad según el valor esperado
+            $valorEsperadoLower = strtolower($this->valor_cualitativo);
+
+            if (str_contains($valorEsperadoLower, 'negativo') || str_contains($valorEsperadoLower, 'no reactivo')) {
+                // Si se esperaba negativo y es positivo, es crítico
+                $resultado['tipo_alerta'] = 'CRITICO';
+            } else {
+                $resultado['tipo_alerta'] = 'ALTO';
+            }
+        }
+
+        return $resultado;
+    }
+
+    /**
+     * Obtener el texto del rango para mostrar
+     */
+    public function getRangoTextoAttribute(): string
+    {
+        switch ($this->tipo_referencia) {
+            case 'RANGO':
+                $partes = [];
+                if ($this->valor_min !== null) {
+                    $partes[] = $this->valor_min;
+                }
+                if ($this->valor_max !== null) {
+                    if (! empty($partes)) {
+                        $partes[] = '-';
+                    }
+                    $partes[] = $this->valor_max;
+                }
+
+                return implode(' ', $partes).($this->parametro && $this->parametro->unidad_medida ? ' '.$this->parametro->unidad_medida : '');
+
+            case 'CATEGORIZADO':
+                // Formato: Categoría: min - max (sin operadores)
+                $categoria = $this->categoria ?? 'Sin categoría';
+                $rango = '';
+
+                if ($this->valor_min !== null && $this->valor_max !== null) {
+                    $rango = $this->valor_min.' - '.$this->valor_max;
+                } elseif ($this->valor_min !== null) {
+                    $rango = $this->valor_min.' +';
+                } elseif ($this->valor_max !== null) {
+                    $rango = '0 - '.$this->valor_max;
+                }
+
+                return $categoria.': '.$rango;
+
+            case 'CUALITATIVO':
+                return $this->valor_cualitativo ?? '-';
+
+            case 'INFORMATIVO':
+                return $this->descripcion ?? 'Informativo';
+
+            default:
+                return '-';
+        }
+    }
 }
