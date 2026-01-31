@@ -72,6 +72,14 @@ Route::middleware('auth')->group(function () {
     Route::post('servicio-examen/{servicioExamen}/resultados', [\App\Http\Controllers\ResultadoExamenController::class, 'store'])->name('resultados.store');
     Route::get('servicio-examen/{servicioExamen}/resultados', [\App\Http\Controllers\ResultadoExamenController::class, 'show'])->name('resultados.show');
 
+    // Rutas de Adjuntos de Resultados
+    Route::get('servicio-examen/{servicioExamen}/adjuntos', [\App\Http\Controllers\ResultadoAdjuntoController::class, 'index'])->name('adjuntos.index');
+    Route::post('servicio-examen/{servicioExamen}/adjuntos', [\App\Http\Controllers\ResultadoAdjuntoController::class, 'store'])->name('adjuntos.store');
+    Route::delete('servicio-examen/{servicioExamen}/adjuntos/{adjunto}', [\App\Http\Controllers\ResultadoAdjuntoController::class, 'destroy'])->name('adjuntos.destroy');
+    Route::get('servicio-examen/{servicioExamen}/adjuntos/{adjunto}/download', [\App\Http\Controllers\ResultadoAdjuntoController::class, 'download'])->name('adjuntos.download');
+    Route::get('servicio-examen/{servicioExamen}/adjuntos/download-all', [\App\Http\Controllers\ResultadoAdjuntoController::class, 'downloadAll'])->name('adjuntos.download-all');
+    Route::post('servicio-examen/{servicioExamen}/adjuntos/orden', [\App\Http\Controllers\ResultadoAdjuntoController::class, 'updateOrden'])->name('adjuntos.orden');
+
     // Rutas de Perfil
     Route::get('/perfil', [\App\Http\Controllers\PerfilController::class, 'edit'])->name('perfil.edit');
     Route::put('/perfil', [\App\Http\Controllers\PerfilController::class, 'update'])->name('perfil.update');

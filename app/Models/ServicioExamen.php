@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class ServicioExamen extends Model
 {
@@ -52,6 +53,15 @@ class ServicioExamen extends Model
     public function resultados()
     {
         return $this->hasMany(ResultadoExamen::class, 'servicio_examen_id');
+    }
+
+    /**
+     * Relación con ResultadosAdjuntos (archivos adjuntos) ⭐ NUEVA
+     */
+    public function adjuntos(): HasMany
+    {
+        return $this->hasMany(ResultadoAdjunto::class, 'servicio_examen_id')
+            ->orderBy('orden', 'asc');
     }
 
     // Scopes

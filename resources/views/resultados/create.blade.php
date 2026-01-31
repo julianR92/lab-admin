@@ -18,9 +18,14 @@
             </nav>
         </div>
         <div class="col-md-4 text-end">
-            <a href="{{ route('servicios.show', $servicioExamen->servicio_id) }}" class="btn btn-secondary">
-                <i class="fas fa-arrow-left me-2"></i>Volver
-            </a>
+            <div class="btn-group" role="group">
+                <a href="{{ route('resultados.show', $servicioExamen) }}" class="btn btn-info" title="Ver imágenes adjuntas">
+                    <i class="fas fa-images me-2"></i>Imágenes
+                </a>
+                <a href="{{ route('servicios.show', $servicioExamen->servicio_id) }}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left me-2"></i>Volver
+                </a>
+            </div>
         </div>
     </div>
 

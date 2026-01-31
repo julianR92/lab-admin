@@ -246,5 +246,8 @@
             @endif
         </div>
     </div>
+
+    {{-- Galería de Adjuntos --}}
+    @include('resultados.partials.galeria-adjuntos')
 </div>
 @endsection

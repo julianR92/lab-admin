@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Profesional extends Model
 {
@@ -40,6 +41,11 @@ class Profesional extends Model
     public function resultadosValidados()
     {
         return $this->hasMany(ResultadoExamen::class, 'validado_por');
+    }
+
+    public function adjuntosSubidos(): HasMany
+    {
+        return $this->hasMany(ResultadoAdjunto::class, 'subido_por');
     }
 
     // Accessors
