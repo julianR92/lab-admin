@@ -444,7 +444,44 @@ class ResultadoExamen extends Model
             }
         }
 
-        return $query->orderBy('orden')->first();
+        $candidatos = $query->orderBy('orden')->get();
+
+        // Si hay un valor numérico, buscar el rango donde cae el valor
+        if ($this->valor_numerico !== null && $candidatos->isNotEmpty()) {
+            $valorNumerico = (float) $this->valor_numerico;
+
+            foreach ($candidatos as $candidato) {
+                // Para tipo RANGO, verificar si el valor cae dentro del rango
+                if ($candidato->tipo_referencia === 'RANGO') {
+                    $dentroDelRango = true;
+
+                    // Verificar límite inferior
+                    if ($candidato->valor_min !== null) {
+                        $dentroDelRango = $dentroDelRango && ($valorNumerico >= (float) $candidato->valor_min);
+                    }
+
+                    // Verificar límite superior
+                    if ($candidato->valor_max !== null) {
+                        $dentroDelRango = $dentroDelRango && ($valorNumerico <= (float) $candidato->valor_max);
+                    }
+
+                    if ($dentroDelRango) {
+                        return $candidato;
+                    }
+                }
+
+                // Para tipo CATEGORIZADO, buscar en qué categoría cae
+                if ($candidato->tipo_referencia === 'CATEGORIZADO') {
+                    $evaluacion = $candidato->evaluarValor($valorNumerico);
+                    if ($evaluacion['dentro_rango']) {
+                        return $candidato;
+                    }
+                }
+            }
+        }
+
+        // Si no encontró un rango específico donde caiga el valor, devolver el primero (fallback)
+        return $candidatos->first();
     }
 
     /**

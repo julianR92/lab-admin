@@ -63,6 +63,7 @@ Route::middleware('auth')->group(function () {
     // Rutas de Servicios
     Route::resource('servicios', \App\Http\Controllers\ServicioController::class);
     Route::get('servicios/{servicio}/orden-pdf', [\App\Http\Controllers\ServicioController::class, 'descargarOrden'])->name('servicios.descargar-orden');
+    Route::get('servicios/{servicio}/resultados-pdf', [\App\Http\Controllers\ResultadoPdfController::class, 'generarPdf'])->name('servicios.resultados-pdf');
     Route::post('servicios/{servicio}/pago', [\App\Http\Controllers\ServicioController::class, 'registrarPago'])->name('servicios.registrar-pago');
     Route::post('servicio-examen/{servicioExamen}/profesional', [\App\Http\Controllers\ServicioController::class, 'asignarProfesional'])->name('servicios.asignar-profesional');
     Route::post('servicio-examen/{servicioExamen}/estado', [\App\Http\Controllers\ServicioController::class, 'cambiarEstado'])->name('servicios.cambiar-estado');

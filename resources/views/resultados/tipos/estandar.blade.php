@@ -20,6 +20,7 @@
                         ->orderBy('orden')
                         ->get();
                     $esCategorizado = $valoresReferencia->first() && $valoresReferencia->first()->tipo_referencia === 'CATEGORIZADO';
+                    $tieneMultiplesRangos = $valoresReferencia->count() > 1;
                 @endphp
                 <tr data-parametro-id="{{ $parametro->id }}">
                     <td>
@@ -66,24 +67,57 @@
                     </td>
                     <td>
                         <small class="text-muted rango-referencia" id="rango-{{ $parametro->id }}">
-                            @if ($esCategorizado)
-                                {{-- Mostrar todos los rangos para tipo CATEGORIZADO --}}
+                            @if ($tieneMultiplesRangos)
+                                {{-- Mostrar todos los rangos cuando hay múltiples --}}
                                 @foreach ($valoresReferencia as $vr)
                                     <div class="mb-1">
-                                        <strong>{{ $vr->categoria }}:</strong>
-                                        @if ($vr->valor_min && $vr->valor_max)
-                                            {{ $vr->valor_min }} - {{ $vr->valor_max }}
-                                        @elseif ($vr->valor_min)
-                                            {{ $vr->valor_min }} +
-                                        @elseif ($vr->valor_max)
-                                            0 - {{ $vr->valor_max }}
+                                        @if ($esCategorizado)
+                                            {{-- Para tipo CATEGORIZADO mostrar la categoría --}}
+                                            <strong>{{ $vr->categoria }}:</strong>
+                                        @elseif ($vr->condicion_especial)
+                                            {{-- Para tipo RANGO con condición especial (ej: semanas de embarazo) --}}
+                                            <strong>{{ $vr->condicion_especial }}:</strong>
+                                        @elseif ($vr->genero || $vr->edad_min || $vr->edad_max)
+                                            {{-- Mostrar género/edad si están definidos --}}
+                                            <strong>
+                                                @if ($vr->genero)
+                                                    {{ $vr->genero === 'M' ? 'Hombre' : 'Mujer' }}
+                                                @endif
+                                                @if ($vr->edad_min || $vr->edad_max)
+                                                    ({{ $vr->edad_min ?? 0 }}-{{ $vr->edad_max ?? '+' }} años)
+                                                @endif:
+                                            </strong>
+                                        @endif
+
+                                        @if ($vr->tipo_referencia === 'RANGO')
+                                            @if ($vr->valor_min && $vr->valor_max)
+                                                {{ number_format($vr->valor_min, 2, '.', '') }} - {{ number_format($vr->valor_max, 2, '.', '') }}
+                                            @elseif ($vr->valor_min)
+                                                {{ number_format($vr->valor_min, 2, '.', '') }} +
+                                            @elseif ($vr->valor_max)
+                                                0 - {{ number_format($vr->valor_max, 2, '.', '') }}
+                                            @endif
+                                        @elseif ($vr->tipo_referencia === 'CUALITATIVO')
+                                            {{ $vr->valor_cualitativo }}
+                                        @elseif ($vr->tipo_referencia === 'CATEGORIZADO')
+                                            @if ($vr->valor_min && $vr->valor_max)
+                                                {{ number_format($vr->valor_min, 2, '.', '') }} - {{ number_format($vr->valor_max, 2, '.', '') }}
+                                            @elseif ($vr->valor_min)
+                                                {{ number_format($vr->valor_min, 2, '.', '') }} +
+                                            @elseif ($vr->valor_max)
+                                                0 - {{ number_format($vr->valor_max, 2, '.', '') }}
+                                            @endif
+                                        @endif
+
+                                        @if ($vr->unidad_medida)
+                                            {{ $vr->unidad_medida }}
                                         @endif
                                     </div>
                                 @endforeach
                             @elseif ($parametro->valorReferenciaAplicable)
-                                {{-- Mostrar rango único para tipo RANGO --}}
+                                {{-- Mostrar rango único cuando solo hay uno --}}
                                 @if ($parametro->valorReferenciaAplicable->tipo_referencia === 'RANGO')
-                                    {{ $parametro->valorReferenciaAplicable->valor_min }} - {{ $parametro->valorReferenciaAplicable->valor_max }}
+                                    {{ number_format($parametro->valorReferenciaAplicable->valor_min, 2, '.', '') }} - {{ number_format($parametro->valorReferenciaAplicable->valor_max, 2, '.', '') }}
                                 @elseif ($parametro->valorReferenciaAplicable->tipo_referencia === 'CUALITATIVO')
                                     {{ $parametro->valorReferenciaAplicable->valor_cualitativo }}
                                 @endif

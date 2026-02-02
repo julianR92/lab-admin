@@ -12,6 +12,7 @@
         @foreach ($parametrosAgrupados as $seccion => $parametros)
             @php
                 $seccionId = str_replace(' ', '_', strtolower($seccion ?? 'general'));
+                $requeridos = $parametros->where('requerido', true)->count();
             @endphp
             <div class="accordion-item">
                 <h2 class="accordion-header" id="heading-{{ $seccionId }}">
@@ -21,6 +22,11 @@
                             aria-controls="collapse-{{ $seccionId }}">
                         <strong>{{ $seccion ?: 'General' }}</strong>
                         <span class="badge bg-secondary ms-2">{{ $parametros->count() }} parámetros</span>
+                        @if($requeridos > 0)
+                            <span class="badge bg-danger ms-1" title="{{ $requeridos }} campo(s) obligatorio(s)">
+                                <i class="fas fa-asterisk"></i> {{ $requeridos }}
+                            </span>
+                        @endif
                     </button>
                 </h2>
                 <div id="collapse-{{ $seccionId }}"

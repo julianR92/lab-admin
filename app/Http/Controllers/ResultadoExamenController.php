@@ -57,6 +57,11 @@ class ResultadoExamenController extends Controller
         // Agrupar parámetros por sección si existe
         $parametrosAgrupados = $servicioExamen->examen->parametros->groupBy('seccion');
 
+        // return [
+        //     'servicioExamen' => $servicioExamen,
+        //     'contexto' => $contexto,
+        //     'parametrosAgrupados' => $parametrosAgrupados  ];
+
         return view('resultados.create', compact('servicioExamen', 'contexto', 'parametrosAgrupados'));
     }
 
@@ -82,22 +87,60 @@ class ResultadoExamenController extends Controller
             ], 422);
         }
 
+        // Validar datos de entrada
+        $resultados = $request->input('resultados', []);
+
+
+        // Log para debugging
+        Log::info('Iniciando guardado de resultados', [
+            'servicio_examen_id' => $servicioExamen->id,
+            'examen' => $servicioExamen->examen->nombre,
+            'tipo_resultado' => $servicioExamen->examen->tipo_resultado,
+            'total_parametros_enviados' => count($resultados),
+        ]);
+
+        // Validar que se envíen resultados
+        if (empty($resultados) && $servicioExamen->examen->tipo_resultado !== 'TEXTO_DESCRIPTIVO') {
+            return response()->json([
+                'success' => false,
+                'message' => 'No se recibieron resultados para guardar. Por favor complete al menos un parámetro.',
+            ], 422);
+        }
+
+        // Cargar parámetros del examen con sus configuraciones
+        $parametrosExamen = $servicioExamen->examen->parametros()
+            ->where('status', true)
+            ->get();
+
+        // Validar campos requeridos
+        $erroresValidacion = [];
+        foreach ($parametrosExamen as $parametro) {
+            if ($parametro->requerido && !$parametro->es_calculado) {
+                $valorEnviado = $resultados[$parametro->id]['valor'] ?? null;
+
+                if (is_null($valorEnviado) || $valorEnviado === '') {
+                    $erroresValidacion[] = "El campo '{$parametro->nombre_parametro}' es obligatorio.";
+                }
+            }
+        }
+
+        if (!empty($erroresValidacion)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Por favor complete todos los campos obligatorios marcados con *',
+                'errors' => $erroresValidacion,
+            ], 422);
+        }
+
         DB::beginTransaction();
         try {
-            $resultados = $request->input('resultados', []);
-
-            // DEBUG: Log para ver qué llega
-            \Log::info('Guardando resultados', [
-                'servicio_examen_id' => $servicioExamen->id,
-                'tipo_resultado' => $servicioExamen->examen->tipo_resultado,
-                'resultados' => $resultados,
-            ]);
-
             $warnings = [];
             $contexto = [
                 'genero' => $servicioExamen->servicio->cliente->genero,
                 'edad' => $servicioExamen->servicio->cliente->edad,
             ];
+
+            $contadorGuardados = 0;
 
             foreach ($resultados as $parametroId => $data) {
                 // Manejo especial para TEXTO_DESCRIPTIVO
@@ -111,7 +154,7 @@ class ResultadoExamenController extends Controller
                                 'examen_id' => $servicioExamen->examen_id,
                                 'nombre_parametro' => 'Descripción',
                                 'codigo_parametro' => 'DESC',
-                                'tipo_dato' => 'TEXTO',
+                                'tipo_dato' => 'TEXT',
                                 'orden' => 1,
                                 'requerido' => true,
                                 'status' => true,
@@ -126,45 +169,73 @@ class ResultadoExamenController extends Controller
                         'parametro_id' => $parametroId,
                     ]);
 
+                    // Guardar el valor si existe
+                    if (isset($data['valor'])) {
+                        $resultado->valor_texto = $data['valor'];
+                    }
+
                     $resultado->observaciones = $data['observaciones'] ?? null;
                     $resultado->interpretacion = $data['interpretacion'] ?? null;
                     $resultado->conclusiones = $data['conclusiones'] ?? null;
                     $resultado->capturado_por = Auth::id();
                     $resultado->save();
 
+                    $contadorGuardados++;
+
                     continue;
                 }
 
                 $parametro = ExamenParametro::find($parametroId);
 
-                if (! $parametro || $parametro->es_calculado) {
+                if (! $parametro) {
+                    Log::warning("Parámetro no encontrado: {$parametroId}");
+                    continue;
+                }
+
+                if ($parametro->es_calculado) {
                     continue; // Los calculados se procesan después
                 }
 
-                // Verificar si ya existe el resultado
-                $resultado = ResultadoExamen::firstOrNew([
-                    'servicio_examen_id' => $servicioExamen->id,
-                    'parametro_id' => $parametroId,
-                ]);
+                try {
+                    // Verificar si ya existe el resultado
+                    $resultado = ResultadoExamen::firstOrNew([
+                        'servicio_examen_id' => $servicioExamen->id,
+                        'parametro_id' => $parametroId,
+                    ]);
 
-                // Asignar valores según tipo de dato
-                $this->asignarValor($resultado, $parametro, $data);
+                    // Asignar valores según tipo de dato
+                    $this->asignarValor($resultado, $parametro, $data);
 
-                $resultado->capturado_por = Auth::id();
-                $resultado->save();
+                    $resultado->capturado_por = Auth::id();
+                    $resultado->save();
 
-                // Evaluar automáticamente
-                $resultado->evaluar($contexto);
-                $resultado->save();
+                    $contadorGuardados++;
 
-                // Verificar alertas críticas
-                if ($resultado->tipo_alerta === ResultadoExamen::ALERTA_CRITICO) {
-                    $warnings[] = [
-                        'tipo' => 'VALOR_CRITICO',
-                        'mensaje' => "⚠ Valor crítico detectado en {$parametro->nombre_parametro}: {$resultado->valor_formateado}",
-                        'parametro' => $parametro->nombre_parametro,
-                    ];
+                    // Evaluar automáticamente
+                    $resultado->evaluar($contexto);
+                    $resultado->save();
+
+                    // Verificar alertas críticas
+                    if ($resultado->tipo_alerta === ResultadoExamen::ALERTA_CRITICO) {
+                        $warnings[] = [
+                            'tipo' => 'VALOR_CRITICO',
+                            'mensaje' => "⚠ Valor crítico detectado en {$parametro->nombre_parametro}: {$resultado->valor_formateado}",
+                            'parametro' => $parametro->nombre_parametro,
+                        ];
+                    }
+                } catch (\Exception $e) {
+                    Log::error("Error guardando parámetro {$parametro->nombre_parametro}", [
+                        'parametro_id' => $parametroId,
+                        'data' => $data,
+                        'error' => $e->getMessage(),
+                    ]);
+                    throw new \Exception("Error al guardar {$parametro->nombre_parametro}: {$e->getMessage()}");
                 }
+            }
+
+            // Verificar que se hayan guardado resultados
+            if ($contadorGuardados === 0 && $servicioExamen->examen->tipo_resultado !== 'TEXTO_DESCRIPTIVO') {
+                throw new \Exception('No se guardó ningún resultado. Verifique los datos enviados.');
             }
 
             // Calcular parámetros calculados
@@ -183,9 +254,15 @@ class ResultadoExamenController extends Controller
 
             DB::commit();
 
+            Log::info('Resultados guardados exitosamente', [
+                'servicio_examen_id' => $servicioExamen->id,
+                'resultados_guardados' => $contadorGuardados,
+                'warnings' => count($warnings),
+            ]);
+
             return response()->json([
                 'success' => true,
-                'message' => 'Resultados guardados correctamente',
+                'message' => "Resultados guardados correctamente ({$contadorGuardados} parámetros)",
                 'warnings' => $warnings,
                 'redirect' => route('servicios.show', $servicioExamen->servicio_id),
             ]);
@@ -193,9 +270,17 @@ class ResultadoExamenController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
 
+            Log::error('Error al guardar resultados', [
+                'servicio_examen_id' => $servicioExamen->id,
+                'usuario' => Auth::id(),
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
             return response()->json([
                 'success' => false,
                 'message' => 'Error al guardar resultados: '.$e->getMessage(),
+                'error_details' => config('app.debug') ? $e->getTraceAsString() : null,
             ], 500);
         }
     }
@@ -227,6 +312,14 @@ class ResultadoExamenController extends Controller
      */
     private function asignarValor(ResultadoExamen $resultado, ExamenParametro $parametro, $data)
     {
+        // Log para debugging
+        Log::debug("Asignando valor a parámetro", [
+            'parametro' => $parametro->nombre_parametro,
+            'tipo_dato' => $parametro->tipo_dato,
+            'valor_recibido' => $data['valor'] ?? null,
+            'tiene_opciones' => !empty($parametro->opciones_select),
+        ]);
+
         switch ($parametro->tipo_dato) {
             case 'DECIMAL':
             case 'INTEGER':
@@ -239,14 +332,20 @@ class ResultadoExamenController extends Controller
                 $resultado->valor_cualitativo = $data['valor'] ?? null;
                 break;
 
-            case 'TEXTO':
+            case 'TEXT':
                 // Si tiene opciones_select, es un SELECT disfrazado de TEXTO
-                if ($parametro->opciones_select && is_array($parametro->opciones_select)) {
+                $opcionesSelect = $parametro->opciones_select;
+
+                // Convertir JSON string a array si es necesario
+                if (is_string($opcionesSelect)) {
+                    $opcionesSelect = json_decode($opcionesSelect, true);
+                }
+
+                if ($opcionesSelect && is_array($opcionesSelect) && !empty($opcionesSelect)) {
                     $resultado->valor_cualitativo = $data['valor'] ?? null;
                 } else {
                     $resultado->valor_texto = $data['valor'] ?? null;
                 }
-                break;
                 break;
 
             case 'TEXTO_LARGO':
@@ -268,6 +367,12 @@ class ResultadoExamenController extends Controller
 
             case 'HORA':
                 $resultado->valor_hora = $data['valor'] ?? null;
+                break;
+
+            default:
+                // Por defecto, guardar como texto
+                Log::warning("Tipo de dato no reconocido: {$parametro->tipo_dato}, guardando como texto");
+                $resultado->valor_texto = $data['valor'] ?? null;
                 break;
         }
     }

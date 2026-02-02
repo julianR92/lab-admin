@@ -294,20 +294,25 @@ class ExamenValorReferencia extends Model
      */
     public function getRangoTextoAttribute(): string
     {
+        $decimales = $this->parametro?->decimales ?? 2;
+        $prefijo = $this->obtenerPrefijoContexto();
+
         switch ($this->tipo_referencia) {
             case 'RANGO':
                 $partes = [];
                 if ($this->valor_min !== null) {
-                    $partes[] = $this->valor_min;
+                    $partes[] = number_format((float) $this->valor_min, $decimales, '.', '');
                 }
                 if ($this->valor_max !== null) {
                     if (! empty($partes)) {
                         $partes[] = '-';
                     }
-                    $partes[] = $this->valor_max;
+                    $partes[] = number_format((float) $this->valor_max, $decimales, '.', '');
                 }
 
-                return implode(' ', $partes).($this->parametro && $this->parametro->unidad_medida ? ' '.$this->parametro->unidad_medida : '');
+                $rango = implode(' ', $partes).($this->parametro && $this->parametro->unidad_medida ? ' '.$this->parametro->unidad_medida : '');
+
+                return $prefijo ? $prefijo.': '.$rango : $rango;
 
             case 'CATEGORIZADO':
                 // Formato: Categoría: min - max (sin operadores)
@@ -315,17 +320,21 @@ class ExamenValorReferencia extends Model
                 $rango = '';
 
                 if ($this->valor_min !== null && $this->valor_max !== null) {
-                    $rango = $this->valor_min.' - '.$this->valor_max;
+                    $rango = number_format((float) $this->valor_min, $decimales, '.', '').' - '.number_format((float) $this->valor_max, $decimales, '.', '');
                 } elseif ($this->valor_min !== null) {
-                    $rango = $this->valor_min.' +';
+                    $rango = number_format((float) $this->valor_min, $decimales, '.', '').' +';
                 } elseif ($this->valor_max !== null) {
-                    $rango = '0 - '.$this->valor_max;
+                    $rango = '0 - '.number_format((float) $this->valor_max, $decimales, '.', '');
                 }
 
-                return $categoria.': '.$rango;
+                $texto = $categoria.': '.$rango;
+
+                return $prefijo ? $prefijo.' - '.$texto : $texto;
 
             case 'CUALITATIVO':
-                return $this->valor_cualitativo ?? '-';
+                $valor = $this->valor_cualitativo ?? '-';
+
+                return $prefijo ? $prefijo.': '.$valor : $valor;
 
             case 'INFORMATIVO':
                 return $this->descripcion ?? 'Informativo';
@@ -333,5 +342,32 @@ class ExamenValorReferencia extends Model
             default:
                 return '-';
         }
+    }
+
+    /**
+     * Obtener prefijo contextual (condición, género, edad)
+     */
+    private function obtenerPrefijoContexto(): ?string
+    {
+        $partes = [];
+
+        // Prioridad 1: Condición especial (ej: "Embarazo 5 Semanas")
+        if ($this->condicion_especial) {
+            return $this->condicion_especial;
+        }
+
+        // Prioridad 2: Género
+        if ($this->genero) {
+            $partes[] = $this->genero === 'M' ? 'Hombre' : 'Mujer';
+        }
+
+        // Prioridad 3: Rango de edad
+        if ($this->edad_min !== null || $this->edad_max !== null) {
+            $edadMin = $this->edad_min ?? 0;
+            $edadMax = $this->edad_max ? $this->edad_max.' años' : '+ años';
+            $partes[] = "({$edadMin}-{$edadMax})";
+        }
+
+        return ! empty($partes) ? implode(' ', $partes) : null;
     }
 }

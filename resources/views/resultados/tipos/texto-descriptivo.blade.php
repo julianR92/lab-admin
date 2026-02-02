@@ -34,7 +34,7 @@
                         @endforeach
                     </select>
                 </div>
-            @elseif ($parametro->tipo_dato === 'TEXTO')
+            @elseif (in_array($parametro->tipo_dato, ['TEXT', 'TEXTO']))
                 <div class="col-md-6 mb-3">
                     <label class="form-label">
                         <strong>{{ $parametro->nombre_parametro }}</strong>
@@ -57,7 +57,7 @@
 <input type="hidden" name="resultados[{{ $parametroId }}][tipo]" value="TEXTO_DESCRIPTIVO">
 
 <div class="row">
-    <div class="col-12 mb-3">
+    {{-- <div class="col-12 mb-3">
         <label class="form-label">
             <strong><i class="fas fa-eye me-2"></i>Observaciones</strong>
             <small class="text-muted">(Descripción de lo observado, características de la muestra)</small>
@@ -66,7 +66,7 @@
                   class="form-control"
                   rows="4"
                   placeholder="Describa las características observadas en la muestra...">{{ $resultadoExistente ? $resultadoExistente->observaciones : '' }}</textarea>
-    </div>
+    </div> --}}
 
     <div class="col-12 mb-3">
         <label class="form-label">

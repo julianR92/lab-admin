@@ -20,6 +20,11 @@
             <a href="{{ route('servicios.descargar-orden', $servicio) }}" class="btn btn-success me-2" target="_blank">
                 <i class="fas fa-file-pdf me-2"></i>Descargar Orden
             </a>
+            @if($servicio->serviciosExamen->where('estado', 'VALIDADO')->count() > 0)
+            <a href="{{ route('servicios.resultados-pdf', $servicio) }}" class="btn btn-info me-2" target="_blank" title="Descargar resultados validados">
+                <i class="fas fa-file-medical-alt me-2"></i>Resultados PDF
+            </a>
+            @endif
             <a href="{{ route('servicios.edit', $servicio) }}" class="btn btn-primary">
                 <i class="fas fa-edit me-2"></i>Editar
             </a>
@@ -233,9 +238,12 @@
                                         @endif
 
                                         @if ($servicioExamen->estado == 'VALIDADO')
-                                            <button type="button" class="btn btn-danger" title="Imprimir PDF">
+                                            <a href="{{ route('servicios.resultados-pdf', $servicio) }}" class="btn btn-danger" title="Imprimir PDF" target="_blank">
                                                 <i class="fas fa-file-pdf"></i>
-                                            </button>
+                                            </a>
+                                            <a href="{{ route('resultados.show', $servicioExamen) }}" class="btn btn-info" title="Ver Resultados">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
                                             <form method="POST" action="{{ route('servicios.cambiar-estado', $servicioExamen) }}" class="d-inline">
                                                 @csrf
                                                 <input type="hidden" name="estado" value="ENTREGADO">
@@ -245,7 +253,10 @@
                                             </form>
                                         @endif
 
-                                        @if (in_array($servicioExamen->estado, ['COMPLETADO', 'VALIDADO', 'ENTREGADO']))
+                                        @if ($servicioExamen->estado == 'ENTREGADO')
+                                            <a href="{{ route('servicios.resultados-pdf', $servicio) }}" class="btn btn-danger" title="Imprimir PDF" target="_blank">
+                                                <i class="fas fa-file-pdf"></i>
+                                            </a>
                                             <a href="{{ route('resultados.show', $servicioExamen) }}" class="btn btn-info" title="Ver Resultados">
                                                 <i class="fas fa-eye"></i>
                                             </a>

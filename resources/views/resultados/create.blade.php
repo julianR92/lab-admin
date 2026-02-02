@@ -2,6 +2,38 @@
 
 @section('title', 'Capturar Resultados - ' . $servicioExamen->examen->nombre)
 
+@push('styles')
+<style>
+    /* Estilos para campos con error */
+    .is-invalid {
+        border-color: #dc3545 !important;
+        background-color: #fff5f5 !important;
+    }
+
+    .invalid-feedback {
+        color: #dc3545;
+        font-size: 0.875rem;
+        margin-top: 0.25rem;
+    }
+
+    /* Animación para acordeones con errores */
+    .accordion-item.has-errors .accordion-button {
+        background-color: #fff5f5;
+        border-left: 3px solid #dc3545;
+    }
+
+    /* Badge de campos requeridos más visible */
+    .badge.bg-danger {
+        animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.7; }
+    }
+</style>
+@endpush
+
 @section('content')
 <div class="container-fluid py-4">
     <div class="row mb-4">
@@ -174,6 +206,45 @@ document.getElementById('observaciones_profesional').addEventListener('input', f
 document.addEventListener('DOMContentLoaded', function() {
     const textarea = document.getElementById('observaciones_profesional');
     document.getElementById('contador-caracteres').textContent = textarea.value.length;
+
+    // Limpiar errores de validación cuando el usuario empiece a escribir/seleccionar
+    document.querySelectorAll('input, select, textarea').forEach(campo => {
+        campo.addEventListener('input', function() {
+            if (this.classList.contains('is-invalid')) {
+                this.classList.remove('is-invalid');
+                const errorMsg = this.parentElement.querySelector('.invalid-feedback');
+                if (errorMsg) errorMsg.remove();
+
+                // Si era el último error en el acordeón, quitar la marca
+                const acordeon = this.closest('.accordion-item');
+                if (acordeon && acordeon.classList.contains('has-errors')) {
+                    const camposInvalidosRestantes = acordeon.querySelectorAll('.is-invalid');
+                    if (camposInvalidosRestantes.length === 0) {
+                        acordeon.classList.remove('has-errors');
+                    }
+                }
+            }
+        });
+
+        // También para select que usan change en vez de input
+        if (campo.tagName === 'SELECT') {
+            campo.addEventListener('change', function() {
+                if (this.classList.contains('is-invalid')) {
+                    this.classList.remove('is-invalid');
+                    const errorMsg = this.parentElement.querySelector('.invalid-feedback');
+                    if (errorMsg) errorMsg.remove();
+
+                    const acordeon = this.closest('.accordion-item');
+                    if (acordeon && acordeon.classList.contains('has-errors')) {
+                        const camposInvalidosRestantes = acordeon.querySelectorAll('.is-invalid');
+                        if (camposInvalidosRestantes.length === 0) {
+                            acordeon.classList.remove('has-errors');
+                        }
+                    }
+                }
+            });
+        }
+    });
 });
 
 // Función para mostrar toast
@@ -232,6 +303,85 @@ function showToast(message, type = 'success', warnings = []) {
 document.getElementById('formResultados').addEventListener('submit', function(e) {
     e.preventDefault();
 
+    // ===== VALIDACIÓN PREVIA =====
+    // Limpiar errores anteriores
+    document.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+    document.querySelectorAll('.invalid-feedback').forEach(el => el.remove());
+    document.querySelectorAll('.has-errors').forEach(el => el.classList.remove('has-errors'));
+
+    // Validar campos requeridos
+    const camposRequeridos = this.querySelectorAll('[required]');
+    let camposInvalidos = [];
+
+    camposRequeridos.forEach(campo => {
+        if (!campo.value || campo.value.trim() === '' || campo.value === '-- Seleccione --') {
+            campo.classList.add('is-invalid');
+
+            // Obtener nombre del parámetro del label o th anterior
+            let nombreCampo = 'Este campo';
+            const row = campo.closest('tr');
+            if (row) {
+                const labelCell = row.querySelector('td:first-child strong, th:first-child');
+                if (labelCell) {
+                    nombreCampo = labelCell.textContent.replace('*', '').trim();
+                }
+            }
+
+            // Agregar mensaje de error
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'invalid-feedback d-block';
+            errorDiv.textContent = `${nombreCampo} es obligatorio`;
+            campo.parentElement.appendChild(errorDiv);
+
+            camposInvalidos.push({
+                campo: campo,
+                nombre: nombreCampo,
+                seccion: campo.closest('.accordion-item')
+            });
+        }
+    });
+
+    // Si hay campos inválidos, abrir acordeones y hacer scroll
+    if (camposInvalidos.length > 0) {
+        // Agrupar por sección
+        const seccionesConErrores = new Set();
+        camposInvalidos.forEach(item => {
+            if (item.seccion) {
+                seccionesConErrores.add(item.seccion);
+            }
+        });
+
+        // Abrir todos los acordeones con errores y marcarlos visualmente
+        seccionesConErrores.forEach(seccion => {
+            // Marcar el acordeón con clase de error
+            seccion.classList.add('has-errors');
+
+            const collapseElement = seccion.querySelector('.accordion-collapse');
+            if (collapseElement && !collapseElement.classList.contains('show')) {
+                const bsCollapse = new bootstrap.Collapse(collapseElement, { toggle: true });
+            }
+        });
+
+        // Esperar a que se abran los acordeones y hacer scroll al primer error
+        setTimeout(() => {
+            camposInvalidos[0].campo.scrollIntoView({
+                behavior: 'smooth',
+                block: 'center'
+            });
+            camposInvalidos[0].campo.focus();
+        }, 400);
+
+        // Mostrar toast con resumen de errores
+        showToast(
+            `Por favor complete los ${camposInvalidos.length} campo(s) obligatorio(s) marcado(s) con *`,
+            'danger',
+            camposInvalidos.slice(0, 5).map(item => ({ mensaje: item.nombre }))
+        );
+
+        return false;
+    }
+
+    // ===== CONTINUAR CON ENVÍO =====
     // Limpiar formato de números antes de enviar
     const inputsNumericos = this.querySelectorAll('.valor-numerico');
     inputsNumericos.forEach(input => {
@@ -264,7 +414,15 @@ document.getElementById('formResultados').addEventListener('submit', function(e)
             'Accept': 'application/json'
         }
     })
-    .then(response => response.json())
+    .then(response => {
+        // Capturar tanto respuestas exitosas como errores
+        if (!response.ok) {
+            return response.json().then(errorData => {
+                throw { status: response.status, data: errorData };
+            });
+        }
+        return response.json();
+    })
     .then(data => {
         if (data.success) {
             // Mostrar warnings si existen
@@ -279,10 +437,12 @@ document.getElementById('formResultados').addEventListener('submit', function(e)
                 window.location.href = data.redirect;
             }, 2000);
         } else {
-            throw new Error(data.message || 'Error al guardar resultados');
+            throw { status: 500, data: data };
         }
     })
     .catch(error => {
+        console.error('Error al guardar:', error);
+
         // Restaurar formato de números si falla
         inputsNumericos.forEach(input => {
             if (input.hasAttribute('data-valor-original')) {
@@ -293,7 +453,28 @@ document.getElementById('formResultados').addEventListener('submit', function(e)
 
         submitButton.disabled = false;
         submitButton.innerHTML = '<i class="fas fa-save me-2"></i>Guardar Resultados';
-        showToast(error.message, 'danger');
+
+        // Manejar diferentes tipos de errores
+        let mensajeError = 'Error desconocido al guardar resultados';
+        let erroresDetalle = [];
+
+        if (error.data) {
+            mensajeError = error.data.message || mensajeError;
+
+            // Si hay errores de validación específicos, mostrarlos
+            if (error.data.errors && Array.isArray(error.data.errors)) {
+                erroresDetalle = error.data.errors.map(err => ({ mensaje: err }));
+            }
+        } else if (error.message) {
+            mensajeError = error.message;
+        }
+
+        // Mostrar toast con errores
+        if (erroresDetalle.length > 0) {
+            showToast(mensajeError, 'danger', erroresDetalle);
+        } else {
+            showToast(mensajeError, 'danger');
+        }
     });
 });
 </script>
