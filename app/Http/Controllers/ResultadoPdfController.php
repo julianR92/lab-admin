@@ -32,9 +32,6 @@ class ResultadoPdfController extends Controller
             },
         ])->findOrFail($servicioId);
 
-
-
-
         // Verificar que al menos un examen esté validado
         if ($servicio->serviciosExamen->isEmpty()) {
             abort(404, 'No hay resultados validados para generar el PDF');
@@ -72,6 +69,62 @@ class ResultadoPdfController extends Controller
 
         // Generar nombre del archivo
         $nombreArchivo = 'Resultado_'.$servicio->cliente->documento.'_'.$servicio->cliente->nombre.'_'.$servicio->cliente->apellido.'.pdf';
+
+        return $pdf->stream($nombreArchivo);
+    }
+
+    public function generarPdfIndividual(Request $request, $servicioId, $servicioExamenId)
+    {
+        // Cargar servicio con todas sus relaciones y filtrar por el examen específico
+        $servicio = Servicio::with([
+            'cliente',
+            'serviciosExamen' => function ($query) use ($servicioExamenId) {
+                $query->where('id', $servicioExamenId)
+                    ->whereIn('estado', ['VALIDADO', 'ENTREGADO'])
+                    ->with([
+                        'examen.categoria',
+                        'examen.parametros' => function ($q) {
+                            $q->where('status', 1)->orderBy('orden');
+                        },
+                        'profesional',
+                        'resultados' => function ($q) {
+                            $q->with(['parametro', 'valorReferencia'])->orderBy('id');
+                        },
+                        'adjuntos' => function ($q) {
+                            $q->orderBy('orden');
+                        },
+                    ]);
+            },
+        ])->findOrFail($servicioId);
+
+        // Verificar que el examen esté validado
+        if ($servicio->serviciosExamen->isEmpty()) {
+            abort(404, 'El examen solicitado no está validado o no existe');
+        }
+
+        // Obtener datos de la empresa
+        $empresa = Empresa::first();
+
+        // Preparar datos para el PDF
+        $data = [
+            'servicio' => $servicio,
+            'empresa' => $empresa,
+            'examenesAgrupados' => null,
+            'fecha_generacion' => now(),
+        ];
+
+        // Configurar PDF
+        $pdf = Pdf::loadView('servicios.resultado-pdf', $data);
+        $pdf->setPaper('A4', 'portrait');
+        $pdf->setOption('isHtml5ParserEnabled', true);
+        $pdf->setOption('isRemoteEnabled', true);
+        $pdf->setOption('isPhpEnabled', true);
+        $pdf->setOption('defaultFont', 'DejaVu Sans');
+
+        // Obtener nombre del examen para el archivo
+        $examen = $servicio->serviciosExamen->first();
+        $nombreExamen = str_replace(' ', '_', $examen->examen->nombre);
+        $nombreArchivo = 'Resultado_'.$nombreExamen.'_'.$servicio->cliente->documento.'_'.$servicio->cliente->nombre.'_'.$servicio->cliente->apellido.'.pdf';
 
         return $pdf->stream($nombreArchivo);
     }

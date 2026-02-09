@@ -291,6 +291,7 @@ class ResultadoExamenController extends Controller
     public function show(ServicioExamen $servicioExamen)
     {
         $servicioExamen->load([
+            'servicio',
             'examen.parametros',
             'servicio.cliente',
             'profesional',

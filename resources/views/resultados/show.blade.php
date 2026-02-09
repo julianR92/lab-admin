@@ -22,9 +22,9 @@
                 <i class="fas fa-arrow-left me-2"></i>Volver
             </a>
             @if (in_array($servicioExamen->estado, ['VALIDADO', 'ENTREGADO']))
-                <button type="button" class="btn btn-danger">
+                <a type="button" class="btn btn-danger" href="{{ route('servicios.examen.resultados-pdf', [$servicioExamen->servicio, $servicioExamen]) }}" target="_blank">
                     <i class="fas fa-file-pdf me-2"></i>Generar PDF
-                </button>
+                </a>
             @endif
         </div>
     </div>
