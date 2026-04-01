@@ -65,7 +65,15 @@ class ResultadoPdfController extends Controller
         $pdf->setOption('isHtml5ParserEnabled', true);
         $pdf->setOption('isRemoteEnabled', true);
         $pdf->setOption('isPhpEnabled', true);
-        $pdf->setOption('defaultFont', 'DejaVu Sans');
+        $pdf->setOption('defaultFont', 'Carlito');
+        $pdf->setOption('fontDir', storage_path('fonts'));
+        $pdf->setOption('fontCache', storage_path('fonts'));
+
+        $fontMetrics = $pdf->getDomPDF()->getFontMetrics();
+        $fontMetrics->registerFont(['family' => 'Carlito', 'style' => 'normal', 'weight' => 'normal'], storage_path('fonts/Carlito-Regular.ttf'));
+        $fontMetrics->registerFont(['family' => 'Carlito', 'style' => 'normal', 'weight' => 'bold'], storage_path('fonts/Carlito-Bold.ttf'));
+        $fontMetrics->registerFont(['family' => 'Carlito', 'style' => 'italic', 'weight' => 'normal'], storage_path('fonts/Carlito-Italic.ttf'));
+        $fontMetrics->registerFont(['family' => 'Carlito', 'style' => 'italic', 'weight' => 'bold'], storage_path('fonts/Carlito-BoldItalic.ttf'));
 
         // Generar nombre del archivo
         $nombreArchivo = 'Resultado_'.$servicio->cliente->documento.'_'.$servicio->cliente->nombre.'_'.$servicio->cliente->apellido.'.pdf';
@@ -119,7 +127,15 @@ class ResultadoPdfController extends Controller
         $pdf->setOption('isHtml5ParserEnabled', true);
         $pdf->setOption('isRemoteEnabled', true);
         $pdf->setOption('isPhpEnabled', true);
-        $pdf->setOption('defaultFont', 'DejaVu Sans');
+        $pdf->setOption('defaultFont', 'Carlito');
+        $pdf->setOption('fontDir', storage_path('fonts'));
+        $pdf->setOption('fontCache', storage_path('fonts'));
+
+        $fontMetrics = $pdf->getDomPDF()->getFontMetrics();
+        $fontMetrics->registerFont(['family' => 'Carlito', 'style' => 'normal', 'weight' => 'normal'], storage_path('fonts/Carlito-Regular.ttf'));
+        $fontMetrics->registerFont(['family' => 'Carlito', 'style' => 'normal', 'weight' => 'bold'], storage_path('fonts/Carlito-Bold.ttf'));
+        $fontMetrics->registerFont(['family' => 'Carlito', 'style' => 'italic', 'weight' => 'normal'], storage_path('fonts/Carlito-Italic.ttf'));
+        $fontMetrics->registerFont(['family' => 'Carlito', 'style' => 'italic', 'weight' => 'bold'], storage_path('fonts/Carlito-BoldItalic.ttf'));
 
         // Obtener nombre del examen para el archivo
         $examen = $servicio->serviciosExamen->first();

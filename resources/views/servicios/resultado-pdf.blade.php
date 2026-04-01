@@ -24,8 +24,8 @@
             margin: 20px 20px 20px 15px;
         }
         body {
-            font-family: 'DejaVu Sans', 'Segoe UI', Tahoma, Geneva, sans-serif;
-            font-size: 9pt;
+            font-family: 'Carlito', sans-serif;
+            font-size: 11pt;
             color: #1a1a1a;
             line-height: 1.4;
             margin-top: 120px;
@@ -72,7 +72,7 @@
 
         .header-table {
             width: 100%;
-            border-bottom: 1.5px solid #333;
+            /* border-bottom: 1.5px solid #333; */
             padding-bottom: 6px;
         }
 
@@ -81,114 +81,157 @@
         }
 
         .logo-cell {
-            width: 80px;
+            width: 20%;
             text-align: center;
             padding: 0 5px;
         }
 
         .logo-cell img {
-            width: 70px;
+            width: 180px;
             height: auto;
         }
 
         .info-cell {
+            width: 60%;
             text-align: center;
-            padding: 0 10px;
+        }
+
+        .spacer-cell {
+            width: 40%;
         }
 
         .empresa-nombre {
             font-size: 10pt;
-            font-weight: bold;
-            color: #1a1a1a;
-            margin-bottom: 1px;
-            letter-spacing: 0.3px;
+            font-weight: normal;
+            color: #2a2a2a;
+            letter-spacing: 0.2px;
+            line-height: 1;
         }
 
         .empresa-nit {
-            font-size: 7.5pt;
-            margin-bottom: 2px;
+            font-size: 10pt;
+            font-weight: normal;
+            color: #2a2a2a;
+            letter-spacing: 0.2px;
+            line-height: 1;
         }
 
         .empresa-datos {
-            font-size: 6.5pt;
-            color: #333;
-            line-height: 1.4;
+            font-size: 10pt;
+            color: #2a2a2a;
+            letter-spacing: 0.2px;
+            line-height: 1;
         }
 
         /* ============ DATOS PACIENTE ============ */
         .paciente-table {
             width: 100%;
             border-collapse: collapse;
-            margin: 12px 0;
-            border: 1px solid #444;
+            border-spacing: 0;
+            margin: 8px 0;
+            border-left: none;
+            border-right: none;
+            border-top: 1.5px solid #6d6b6b;
+            border-bottom: 1.5px solid #6d6b6b;
         }
 
         .paciente-table td {
-            padding: 5px 10px;
-            font-size: 8.5pt;
-            border: 1px solid #444;
+            padding: 0 2px;
+            font-size: 10pt;
+            border: none;
+            border-bottom: 1px solid #6d6b6b;
+            border-top: 1px solid #6d6b6b;
+            line-height: 1;
+        }
+
+        .paciente-table tr:last-child td {
+            border-bottom: none;
         }
 
         .paciente-table .label {
-            background-color: #e8e8e8;
             font-weight: bold;
-            width: 22%;
+            width: 30%;
             color: #1a1a1a;
+            font-size: 10pt;
         }
 
         .paciente-table .value {
-            width: 28%;
+            width: 32%;
+            text-transform: capitalize;
+
+        }
+
+        .paciente-table tr:nth-child(even) td {
+            background-color: #cccccc;
+        }
+
+        .paciente-table tr:nth-child(odd) td {
+            background-color: #ffffff;
         }
 
         /* ============ TÍTULO RESULTADOS ============ */
         .titulo-resultados {
             text-align: center;
-            padding: 10px 0;
+            padding: 3px 0;
             font-size: 11pt;
             font-weight: bold;
-            margin: 15px 0 12px 0;
+            margin: 8px 0 8px 0;
             border-top: 2px solid #333;
             border-bottom: 2px solid #333;
             letter-spacing: 1px;
             color: #1a1a1a;
+            font-family: 'Carlito', sans-serif;
         }
 
         /* ============ CATEGORÍA/EXAMEN ============ */
         .categoria-titulo {
-            background-color: #333;
-            color: #fff;
-            padding: 6px 12px;
+            background-color: #cccccc;
+            color: #000;
+            padding: 3px 3px;
             font-size: 10pt;
             font-weight: bold;
-            margin-top: 18px;
+            margin-top: 5px;
             text-align: center;
             letter-spacing: 0.5px;
+            font-family: 'Carlito', sans-serif;
         }
 
         /* ============ TABLA DE RESULTADOS ============ */
         .tabla-resultados {
             width: 100%;
             border-collapse: collapse;
-            margin: 8px 0;
+            margin: 2px 0;
+            border-spacing: 0;
+            /* border-top: 1px solid #6d6b6b;
+            border-bottom: 1px solid #6d6b6b; */
         }
 
         .tabla-resultados thead {
-            background-color: #f0f0f0;
+            /* background-color: #e0e0e0; */
         }
 
         .tabla-resultados th {
-            padding: 7px 10px;
+            padding: 3px 8px;
             text-align: center;
-            font-size: 8.5pt;
+            font-size: 10pt;
             font-weight: bold;
-            border: 1px solid #444;
+            font-family: 'Carlito', sans-serif;
+
+            border: none;
+            /* border-bottom: 1px solid #6d6b6b; */
             color: #1a1a1a;
         }
 
         .tabla-resultados td {
-            padding: 5px 10px;
-            font-size: 8.5pt;
-            border: 1px solid #444;
+            padding: 2px 8px;
+            font-size: 9pt;
+            border: none;
+            font-family: 'Carlito', sans-serif;
+            /* border-bottom: 1px solid #d0d0d0; */
+        }
+
+        .tabla-resultados tr:last-child td {
+            border-bottom: none;
         }
 
         .tabla-resultados .col-parametro {
@@ -212,8 +255,8 @@
             width: 30%;
         }
 
-        .tabla-resultados tbody tr:nth-child(even) {
-            background-color: #fafafa;
+        .tabla-resultados tbody tr:nth-child(even) td {
+            background-color: #f0f0f0;
         }
 
         /* Alertas */
@@ -245,7 +288,7 @@
         }
 
         .tecnica-info {
-            font-size: 8pt;
+            font-size: 9pt;
             /* margin: 8px 0;
             padding: 5px 10px; */
             color: #444;
@@ -312,16 +355,17 @@
         }
 
         .imagen-item {
-            display: inline-block;
-            width: 30%;
-            margin: 8px 1%;
-            vertical-align: top;
+            display: block;
+            width: 80%;
+            margin: 8px auto;
+            text-align: center;
         }
 
         .imagen-item img {
             width: 100%;
-            height: 80px;
-            object-fit: cover;
+            height: auto;
+            max-height: 220px;
+            object-fit: contain;
             border: 1px solid #999;
         }
 
@@ -345,40 +389,42 @@
 
         /* ============ FIRMA ============ */
         .firma-section {
-            margin-top: 35px;
+            margin-top: 15px;
             page-break-inside: avoid;
         }
 
         .firma-container {
-            text-align: center;
-            width: 250px;
-            margin: 0 auto;
+            text-align: right;
+            width: auto;
+            margin: 0;
         }
 
         .firma-imagen {
-            margin-bottom: 8px;
+            margin-bottom: 4px;
         }
 
         .firma-imagen img {
-            max-width: 130px;
-            max-height: 45px;
+            max-width: 160px;
+            max-height: 58px;
         }
 
         .firma-linea {
             border-top: 1px solid #333;
-            padding-top: 8px;
+            padding-top: 5px;
+            display: inline-block;
+            min-width: 150px;
         }
 
         .firma-datos {
             font-size: 8pt;
-            text-align: center;
-            line-height: 1.5;
+            text-align: right;
+            line-height: 0.8;
             color: #1a1a1a;
         }
 
         .firma-datos .profesion {
             font-weight: bold;
-            font-size: 8.5pt;
+            font-size: 8pt;
         }
 
         /* ============ SEPARADOR ============ */
@@ -394,9 +440,12 @@
     <header>
         <table class="header-table">
             <tr>
+                <!--<pre>-->
+                <!--    {{ asset('storage/' . $empresa->logo) }}-->
+                <!--</pre>-->
                 @if($empresa && $empresa->logo)
                 <td class="logo-cell">
-                    <img src="{{ public_path('storage/' . $empresa->logo) }}" alt="Logo">
+                 <img src="{{ asset('storage/' . $empresa->logo) }}" alt="Logo">
                 </td>
                 @endif
                 <td class="info-cell">
@@ -404,10 +453,13 @@
                     <div class="empresa-nit">{{ $empresa->nit ?? '' }}</div>
                     <div class="empresa-datos">
                         {{ $empresa->direccion ?? '' }}{{ $empresa->barrio ? ' – ' . $empresa->barrio : '' }}
-                        <br> Tel: {{ $empresa->telefono_uno ?? '' }}{{ $empresa->telefono_dos ? ' – ' . $empresa->telefono_dos : '' }}
-                        <br> {{ $empresa->email ?? '' }} <br>{{ $empresa->ciudad ?? '' }}
+                        <br> Teléfono: {{ $empresa->telefono_uno ?? '' }}{{ $empresa->telefono_dos ? ' – ' . $empresa->telefono_dos : '' }}
+                        <br> Correo:{{ $empresa->email ?? '' }} <br>{{ $empresa->ciudad ?? '' }} - Santander
                     </div>
                 </td>
+                @if($empresa && $empresa->logo)
+                <td class="spacer-cell"></td>
+                @endif
             </tr>
         </table>
     </header>
@@ -426,7 +478,7 @@
         </tr>
         <tr>
             <td class="label">Paciente:</td>
-            <td class="value">{{ $servicio->cliente->nombre }} {{ $servicio->cliente->apellido }}</td>
+            <td class="value">{{ ucwords(strtolower($servicio->cliente->nombre)) }} {{ ucwords(strtolower($servicio->cliente->apellido)) }}</td>
             <td class="label">Sexo:</td>
             <td class="value">{{ $servicio->cliente->genero == 'M' ? 'Masculino' : ($servicio->cliente->genero == 'F' ? 'Femenino' : $servicio->cliente->genero) }}</td>
         </tr>
@@ -446,14 +498,14 @@
             <td class="label">Edad:</td>
             <td class="value">{{ $servicio->cliente->edad }} años</td>
             <td class="label">Ciudad:</td>
-            <td class="value">{{ $servicio->cliente->ciudad ?? 'No registrado' }}</td>
+            <td class="value" style="text-transform: capitalize;">{{ ucwords(strtolower($servicio->cliente->ciudad ?? 'No registrado')) }}</td>
         </tr>
     </table>
 
     <!-- ============ TÍTULO RESULTADOS ============ -->
-    <div class="titulo-resultados">
+    {{-- <div class="titulo-resultados">
         RESULTADOS CLÍNICOS DE LABORATORIO
-    </div>
+    </div> --}}
 
     <!-- ============ RESULTADOS POR CATEGORÍA/EXAMEN ============ -->
     @php
@@ -479,7 +531,7 @@
 
             <!-- Nombre del Examen (para tablas tipo hematología, numérico, etc.) -->
             @if($hayResultadosTabla && $resultados->count() > 0)
-                <div style="font-weight: bold; font-size: 9pt; margin: 12px 0 5px 0; color: #333; border-bottom: 1px solid #ddd; padding-bottom: 3px;">
+                <div style="font-weight: bold; font-size: 11pt; margin: 5px 0 5px 0; color: #333; border-bottom: 1px solid #6d6b6b; padding-bottom: 3px; font-family: 'Carlito', sans-serif;">
                     {{ strtoupper($servicioExamen->examen->nombre) }}
                 </div>
             @endif
@@ -612,22 +664,26 @@
                 </table>
             @endif
 
-             @if($servicioExamen->observaciones)
-                <div class="tecnica-info"  style="margin-top: 25px;">
-                    <strong>Observacion Medica:</strong> {{ $servicioExamen->observaciones }}
-                </div>
-            @endif
+             @if($servicioExamen->observaciones || $servicioExamen->examen->tecnica || $servicioExamen->fecha_resultado)
+                <table style="width: 100%; margin-top: 4px;">
+                    <tr>
+                        <td class="tecnica-info" style="text-align: left; vertical-align: top; width: 60%;">
+                            @if($servicioExamen->observaciones)
+                                <strong>Observacion Medica:</strong> {{ $servicioExamen->observaciones }}
+                            @endif
+                            <br>
+                             @if($servicioExamen->fecha_resultado)
+                                {{ $servicioExamen->fecha_resultado }}
+                            @endif
+                        </td>
+                        <td class="tecnica-info" style="text-align: right; vertical-align: top; width: 40%;">
+                            @if($servicioExamen->examen->tecnica)
+                                <strong>Técnica:</strong> {{ $servicioExamen->examen->tecnica }}
+                            @endif
 
-            <!-- Técnica -->
-            @if($servicioExamen->examen->tecnica)
-                <div class="tecnica-info">
-                    <strong>Técnica:</strong> {{ $servicioExamen->examen->tecnica }}
-                </div>
-            @endif
-            @if($servicioExamen->fecha_resultado)
-                <div class="tecnica-info">
-                    <strong>Fecha:</strong> {{ $servicioExamen->fecha_resultado }}
-                </div>
+                        </td>
+                    </tr>
+                </table>
             @endif
 
             {{-- <!-- Textos Descriptivos (solo para NO TEXTO_DESCRIPTIVO) -->
@@ -668,7 +724,7 @@
                             $ruta = storage_path('app/public/' . $adj->ruta_archivo);
                             return file_exists($ruta) && in_array(strtolower(pathinfo($ruta, PATHINFO_EXTENSION)), ['jpg', 'jpeg', 'png', 'gif']);
                         });
-                        $chunks = $adjuntosImagenes->chunk(3);
+                        $chunks = $adjuntosImagenes->chunk(1);
                     @endphp
 
                     @foreach($chunks as $chunk)
@@ -707,8 +763,7 @@
                             <div class="firma-datos">
                                 <div class="profesion">{{ strtoupper($servicioExamen->profesional->profesion ?? 'PROFESIONAL') }}</div>
                                 {{ strtoupper($servicioExamen->profesional->nombre) }} {{ strtoupper($servicioExamen->profesional->apellido) }}<br>
-                                {{ $servicioExamen->profesional->documento }}{{ $servicioExamen->profesional->especialidad ? ' – ' . $servicioExamen->profesional->especialidad : '' }} <br>
-                                {{ $servicioExamen->fecha_resultado ?? '' }}
+                                {{ $servicioExamen->profesional->registro_profesional ? 'TP: ' . $servicioExamen->profesional->registro_profesional : $servicioExamen->profesional->documento }}{{ $servicioExamen->profesional->especialidad ? ' – ' . $servicioExamen->profesional->especialidad : '' }}
                             </div>
                         </div>
                     </div>
@@ -731,7 +786,7 @@
         if (isset($pdf)) {
             $text = "Página {PAGE_NUM} de {PAGE_COUNT}";
             $size = 7;
-            $font = $fontMetrics->getFont("DejaVu Sans");
+            $font = $fontMetrics->getFont("Carlito");
             $width = $fontMetrics->get_text_width($text, $font, $size) / 2;
             $x = ($pdf->get_width() - $width) / 2;
             $y = $pdf->get_height() - 28;
