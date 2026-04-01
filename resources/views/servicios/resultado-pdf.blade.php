@@ -173,10 +173,10 @@
         .titulo-resultados {
             text-align: center;
             padding: 3px 0;
-            font-size: 11pt;
+            font-size: 10pt;
             font-weight: bold;
-            margin: 8px 0 8px 0;
-            border-top: 2px solid #333;
+            margin: 2px 0 8px 0;
+            /*border-top: 2px solid #333;*/
             border-bottom: 2px solid #333;
             letter-spacing: 1px;
             color: #1a1a1a;
@@ -418,7 +418,7 @@
         .firma-datos {
             font-size: 8pt;
             text-align: right;
-            line-height: 0.8;
+            line-height: 1.3;
             color: #1a1a1a;
         }
 
@@ -503,9 +503,9 @@
     </table>
 
     <!-- ============ TÍTULO RESULTADOS ============ -->
-    {{-- <div class="titulo-resultados">
+     <div class="titulo-resultados">
         RESULTADOS CLÍNICOS DE LABORATORIO
-    </div> --}}
+    </div>
 
     <!-- ============ RESULTADOS POR CATEGORÍA/EXAMEN ============ -->
     @php
@@ -673,7 +673,7 @@
                             @endif
                             <br>
                              @if($servicioExamen->fecha_resultado)
-                                {{ $servicioExamen->fecha_resultado }}
+                                <strong>Fecha:</strong>{{ $servicioExamen->fecha_resultado }}
                             @endif
                         </td>
                         <td class="tecnica-info" style="text-align: right; vertical-align: top; width: 40%;">
