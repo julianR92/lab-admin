@@ -23,6 +23,7 @@ class ExamenParametro extends Model
         'es_calculado',
         'formula_calculo',
         'requerido',
+        'mostrar_todos_rangos',
         'opciones_select',
         'status',
     ];
@@ -35,6 +36,7 @@ class ExamenParametro extends Model
             'es_calculado' => 'boolean',
             'formula_calculo' => 'array',
             'requerido' => 'boolean',
+            'mostrar_todos_rangos' => 'boolean',
             'opciones_select' => 'array',
             'status' => 'boolean',
         ];

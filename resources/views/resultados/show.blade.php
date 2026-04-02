@@ -181,7 +181,23 @@
                                             </span>
                                         </td>
                                         <td>
-                                            <small class="text-muted">{{ $resultado->rango_referencia ?? '-' }}</small>
+                                            @if ($resultado->parametro->mostrar_todos_rangos && $resultado->parametro->valoresReferencia->isNotEmpty())
+                                                @foreach ($resultado->parametro->valoresReferencia as $vr)
+                                                    <small class="d-block text-muted">
+                                                        @if ($vr->condicion_especial)
+                                                            <strong>{{ $vr->condicion_especial }}:</strong>
+                                                        @elseif ($vr->genero || $vr->edad_min !== null || $vr->edad_max !== null)
+                                                            <strong>
+                                                                @if ($vr->genero){{ $vr->genero === 'M' ? 'Hombre' : 'Mujer' }} @endif
+                                                                @if ($vr->edad_min !== null || $vr->edad_max !== null)({{ $vr->edad_min ?? 0 }}-{{ $vr->edad_max ?? '+' }} años):@endif
+                                                            </strong>
+                                                        @endif
+                                                        {{ $vr->rango_texto }}
+                                                    </small>
+                                                @endforeach
+                                            @else
+                                                <small class="text-muted">{{ $resultado->rango_referencia ?? '-' }}</small>
+                                            @endif
                                         </td>
                                         <td>
                                             <span class="badge bg-{{ $resultado->color_alerta }}">

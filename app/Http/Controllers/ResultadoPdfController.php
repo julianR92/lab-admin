@@ -21,6 +21,9 @@ class ResultadoPdfController extends Controller
                         'examen.parametros' => function ($q) {
                             $q->where('status', 1)->orderBy('orden');
                         },
+                        'examen.parametros.valoresReferencia' => function ($q) {
+                            $q->where('status', 1)->orderBy('orden');
+                        },
                         'profesional',
                         'resultados' => function ($q) {
                             $q->with(['parametro', 'valorReferencia'])->orderBy('id');
@@ -94,6 +97,9 @@ class ResultadoPdfController extends Controller
                         'examen.parametros' => function ($q) {
                             $q->where('status', 1)->orderBy('orden');
                         },
+                        'examen.parametros.valoresReferencia' => function ($q) {
+                            $q->where('status', 1)->orderBy('orden');
+                        },
                         'profesional',
                         'resultados' => function ($q) {
                             $q->with(['parametro', 'valorReferencia'])->orderBy('id');
@@ -140,6 +146,7 @@ class ResultadoPdfController extends Controller
         // Obtener nombre del examen para el archivo
         $examen = $servicio->serviciosExamen->first();
         $nombreExamen = str_replace(' ', '_', $examen->examen->nombre);
+        $nombreExamen = str_replace('/', '-', $nombreExamen);
         $nombreArchivo = 'Resultado_'.$nombreExamen.'_'.$servicio->cliente->documento.'_'.$servicio->cliente->nombre.'_'.$servicio->cliente->apellido.'.pdf';
 
         return $pdf->stream($nombreArchivo);

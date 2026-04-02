@@ -90,7 +90,6 @@ class ResultadoExamenController extends Controller
         // Validar datos de entrada
         $resultados = $request->input('resultados', []);
 
-
         // Log para debugging
         Log::info('Iniciando guardado de resultados', [
             'servicio_examen_id' => $servicioExamen->id,
@@ -115,7 +114,7 @@ class ResultadoExamenController extends Controller
         // Validar campos requeridos
         $erroresValidacion = [];
         foreach ($parametrosExamen as $parametro) {
-            if ($parametro->requerido && !$parametro->es_calculado) {
+            if ($parametro->requerido && ! $parametro->es_calculado) {
                 $valorEnviado = $resultados[$parametro->id]['valor'] ?? null;
 
                 if (is_null($valorEnviado) || $valorEnviado === '') {
@@ -124,7 +123,7 @@ class ResultadoExamenController extends Controller
             }
         }
 
-        if (!empty($erroresValidacion)) {
+        if (! empty($erroresValidacion)) {
             return response()->json([
                 'success' => false,
                 'message' => 'Por favor complete todos los campos obligatorios marcados con *',
@@ -189,6 +188,7 @@ class ResultadoExamenController extends Controller
 
                 if (! $parametro) {
                     Log::warning("Parámetro no encontrado: {$parametroId}");
+
                     continue;
                 }
 
@@ -292,7 +292,9 @@ class ResultadoExamenController extends Controller
     {
         $servicioExamen->load([
             'servicio',
-            'examen.parametros',
+            'examen.parametros.valoresReferencia' => function ($query) {
+                $query->where('status', true)->orderBy('orden');
+            },
             'servicio.cliente',
             'profesional',
             'resultados.parametro',
@@ -314,11 +316,11 @@ class ResultadoExamenController extends Controller
     private function asignarValor(ResultadoExamen $resultado, ExamenParametro $parametro, $data)
     {
         // Log para debugging
-        Log::debug("Asignando valor a parámetro", [
+        Log::debug('Asignando valor a parámetro', [
             'parametro' => $parametro->nombre_parametro,
             'tipo_dato' => $parametro->tipo_dato,
             'valor_recibido' => $data['valor'] ?? null,
-            'tiene_opciones' => !empty($parametro->opciones_select),
+            'tiene_opciones' => ! empty($parametro->opciones_select),
         ]);
 
         switch ($parametro->tipo_dato) {
@@ -342,7 +344,7 @@ class ResultadoExamenController extends Controller
                     $opcionesSelect = json_decode($opcionesSelect, true);
                 }
 
-                if ($opcionesSelect && is_array($opcionesSelect) && !empty($opcionesSelect)) {
+                if ($opcionesSelect && is_array($opcionesSelect) && ! empty($opcionesSelect)) {
                     $resultado->valor_cualitativo = $data['valor'] ?? null;
                 } else {
                     $resultado->valor_texto = $data['valor'] ?? null;

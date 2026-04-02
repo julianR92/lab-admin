@@ -21,6 +21,7 @@ class UpdateExamenParametroRequest extends FormRequest
             'status' => $this->has('status'),
             'requerido' => $this->has('requerido'),
             'es_calculado' => $this->has('es_calculado'),
+            'mostrar_todos_rangos' => $this->has('mostrar_todos_rangos'),
         ]);
     }
 
@@ -57,6 +58,7 @@ class UpdateExamenParametroRequest extends FormRequest
             'formula_calculo.parametros' => 'required_if:es_calculado,1|nullable|array',
             'formula_calculo.descripcion' => 'nullable|string',
             'requerido' => 'nullable|boolean',
+            'mostrar_todos_rangos' => 'nullable|boolean',
             'opciones_select' => 'required_if:tipo_dato,SELECT|array',
             'status' => 'nullable|boolean',
         ];

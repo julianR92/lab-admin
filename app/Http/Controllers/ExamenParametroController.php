@@ -24,6 +24,7 @@ class ExamenParametroController extends Controller
             $datos['status'] = $datos['status'] ? 1 : 0;
             $datos['es_calculado'] = $datos['es_calculado'] ? 1 : 0;
             $datos['requerido'] = $datos['requerido'] ? 1 : 0;
+            $datos['mostrar_todos_rangos'] = ($datos['mostrar_todos_rangos'] ?? false) ? 1 : 0;
 
             // Limpiar formula_calculo si no es calculado
             if (! $datos['es_calculado']) {
@@ -39,6 +40,7 @@ class ExamenParametroController extends Controller
             if ($datos['tipo_dato'] !== 'DECIMAL') {
                 $datos['decimales'] = null;
             }
+
             $parametro = ExamenParametro::create($datos);
 
             return redirect()->route('examenes.show', $parametro->examen_id)
@@ -80,6 +82,7 @@ class ExamenParametroController extends Controller
             $datos['status'] = $datos['status'] ? 1 : 0;
             $datos['es_calculado'] = $datos['es_calculado'] ? 1 : 0;
             $datos['requerido'] = $datos['requerido'] ? 1 : 0;
+            $datos['mostrar_todos_rangos'] = ($datos['mostrar_todos_rangos'] ?? false) ? 1 : 0;
 
             // Limpiar formula_calculo si no es calculado o si está vacío
             if (! $datos['es_calculado']) {

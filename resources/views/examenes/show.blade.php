@@ -503,6 +503,16 @@
 
                             <div class="mb-3">
                                 <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="mostrar_todos_rangos" name="mostrar_todos_rangos">
+                                    <label class="form-check-label" for="mostrar_todos_rangos">
+                                        <i class="fas fa-list-ul me-1"></i>Mostrar todos los rangos de referencia en el resultado
+                                    </label>
+                                </div>
+                                <small class="text-muted">Activa esta opción para exámenes como HCG (hormona del embarazo) donde el médico necesita ver todos los rangos por semana de gestación</small>
+                            </div>
+
+                            <div class="mb-3">
+                                <div class="form-check">
                                     <input class="form-check-input" type="checkbox" id="status" name="status" checked>
                                     <label class="form-check-label" for="status">
                                         Estado Activo
@@ -841,6 +851,7 @@ function editParametro(parametroId) {
             document.getElementById('orden').value = parametro.orden;
             document.getElementById('es_calculado').checked = parametro.es_calculado;
             document.getElementById('requerido').checked = parametro.requerido;
+            document.getElementById('mostrar_todos_rangos').checked = parametro.mostrar_todos_rangos;
             document.getElementById('status').checked = parametro.status;
 
             // Formula
@@ -956,6 +967,7 @@ document.getElementById('parametroForm').addEventListener('submit', function(e) 
         document.getElementById('orden').value = '{{ old("orden") }}';
         document.getElementById('es_calculado').checked = {{ old("es_calculado") ? 'true' : 'false' }};
         document.getElementById('requerido').checked = {{ old("requerido") ? 'true' : 'false' }};
+        document.getElementById('mostrar_todos_rangos').checked = {{ old("mostrar_todos_rangos") ? 'true' : 'false' }};
         document.getElementById('status').checked = {{ old("status", true) ? 'true' : 'false' }};
 
         // Restaurar fórmula si existe

@@ -158,6 +158,7 @@ Modulo central de configuracion. Un examen tiene:
 - `es_calculado` + `formula_calculo` (JSON: `{formula, parametros}`)
 - `opciones_select` (JSON array para tipo SELECT)
 - `unidad_medida`, `decimales`, `orden`, `requerido`
+- `mostrar_todos_rangos` (BOOLEAN, default false): Si true, en la vista de resultados y en el PDF se muestran TODOS los valores de referencia del parametro en vez del unico rango donde cayo el valor. Util para examenes como HCG (hormona del embarazo) donde el medico necesita ver todos los rangos por semana de gestacion
 
 **Nivel Valor de Referencia (ExamenValorReferencia):**
 - `tipo_referencia`: RANGO, CUALITATIVO, CATEGORIZADO, INFORMATIVO

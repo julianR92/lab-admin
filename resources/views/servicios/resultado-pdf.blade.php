@@ -252,7 +252,7 @@
 
         .tabla-resultados .col-referencia {
             text-align: center;
-            width: 30%;
+            width: 40%;
         }
 
         .tabla-resultados tbody tr:nth-child(even) td {
@@ -698,7 +698,25 @@
                                 <td class="col-parametro">{{ $resultado->parametro->nombre_parametro }}</td>
                                 <td class="col-resultado {{ $claseAlerta }}">{{ $valorMostrar }}{{ $simbolo }}</td>
                                 <td class="col-unidad">{{ $resultado->unidad_medida ?? $resultado->parametro->unidad_medida }}</td>
-                                <td class="col-referencia">{{ $resultado->rango_referencia ?? '–' }}</td>
+                                <td class="col-referencia">
+                                    @if ($resultado->parametro->mostrar_todos_rangos && $resultado->parametro->valoresReferencia->isNotEmpty())
+                                        @foreach ($resultado->parametro->valoresReferencia as $vr)
+                                            <div>
+                                                @if ($vr->condicion_especial)
+                                                    {{-- <strong>{{ $vr->condicion_especial }}:</strong> --}}
+                                                @elseif ($vr->genero || $vr->edad_min !== null || $vr->edad_max !== null)
+                                                    <strong>
+                                                        @if ($vr->genero){{ $vr->genero === 'M' ? 'H' : 'M' }}. @endif
+                                                        @if ($vr->edad_min !== null || $vr->edad_max !== null){{ $vr->edad_min ?? 0 }}-{{ $vr->edad_max ?? '+' }}a:@endif
+                                                    </strong>
+                                                @endif
+                                                {{ $vr->rango_texto }}
+                                            </div>
+                                        @endforeach
+                                    @else
+                                        {{ $resultado->rango_referencia ?? '–' }}
+                                    @endif
+                                </td>
                             </tr>
                         @endforeach
                     </tbody>
