@@ -22,6 +22,10 @@ class Empresa extends Model
         'telefono_dos',
         'email',
         'logo',
+        'representante_nombre',
+        'representante_apellido',
+        'representante_documento',
+        'representante_firma',
     ];
 
     // Accessors
@@ -31,13 +35,29 @@ class Empresa extends Model
             return null;
         }
 
-        // Si es una URL completa, retornarla
         if (filter_var($this->logo, FILTER_VALIDATE_URL)) {
             return $this->logo;
         }
 
-        // Si es una ruta en storage, generar URL pública
         return Storage::disk('public')->url($this->logo);
+    }
+
+    public function getRepresentanteFirmaUrlAttribute(): ?string
+    {
+        if (! $this->representante_firma) {
+            return null;
+        }
+
+        if (filter_var($this->representante_firma, FILTER_VALIDATE_URL)) {
+            return $this->representante_firma;
+        }
+
+        return Storage::disk('public')->url($this->representante_firma);
+    }
+
+    public function getRepresentanteNombreCompletoAttribute(): string
+    {
+        return trim($this->representante_nombre.' '.$this->representante_apellido);
     }
 
     public function getDireccionCompletaAttribute(): string
@@ -93,6 +113,9 @@ class Empresa extends Model
             'logo_url' => $this->logo_url,
             'tiene_logo' => $this->tieneLogoConfigurado(),
             'email' => $this->email,
+            'representante_nombre_completo' => $this->representante_nombre_completo,
+            'representante_documento' => $this->representante_documento,
+            'representante_firma_url' => $this->representante_firma_url,
         ];
     }
 }

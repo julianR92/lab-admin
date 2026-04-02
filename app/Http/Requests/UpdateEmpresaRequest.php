@@ -29,6 +29,10 @@ class UpdateEmpresaRequest extends FormRequest
             'telefono_dos' => ['nullable', 'string', 'max:20'],
             'email' => ['required', 'email', 'max:255'],
             'logo' => ['nullable', 'image', 'mimes:png,jpg,jpeg', 'max:2048'],
+            'representante_nombre' => ['nullable', 'string', 'max:100'],
+            'representante_apellido' => ['nullable', 'string', 'max:100'],
+            'representante_documento' => ['nullable', 'string', 'max:20'],
+            'representante_firma' => ['nullable', 'image', 'mimes:png,jpg,jpeg', 'max:2048'],
         ];
     }
 
@@ -56,6 +60,12 @@ class UpdateEmpresaRequest extends FormRequest
             'logo.image' => 'El logo debe ser una imagen.',
             'logo.mimes' => 'El logo debe ser un archivo PNG, JPG o JPEG.',
             'logo.max' => 'El logo no puede exceder 2MB.',
+            'representante_nombre.max' => 'El nombre del representante no puede exceder 100 caracteres.',
+            'representante_apellido.max' => 'El apellido del representante no puede exceder 100 caracteres.',
+            'representante_documento.max' => 'El documento del representante no puede exceder 20 caracteres.',
+            'representante_firma.image' => 'La firma debe ser una imagen.',
+            'representante_firma.mimes' => 'La firma debe ser un archivo PNG, JPG o JPEG.',
+            'representante_firma.max' => 'La firma no puede exceder 2MB.',
         ];
     }
 

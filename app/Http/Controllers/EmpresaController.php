@@ -60,6 +60,18 @@ class EmpresaController extends Controller
                 $datos['logo'] = $rutaLogo;
             }
 
+            // Manejar la subida de la firma del representante
+            if ($request->hasFile('representante_firma')) {
+                // Eliminar firma anterior si existe
+                if ($empresa->representante_firma && Storage::disk('public')->exists($empresa->representante_firma)) {
+                    Storage::disk('public')->delete($empresa->representante_firma);
+                }
+
+                // Guardar nueva firma
+                $rutaFirma = $request->file('representante_firma')->store('firmas-representante', 'public');
+                $datos['representante_firma'] = $rutaFirma;
+            }
+
             $empresa->fill($datos);
             $empresa->save();
 

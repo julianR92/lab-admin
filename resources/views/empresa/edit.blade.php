@@ -148,6 +148,74 @@
                             @enderror
                         </div>
 
+                        <hr class="my-4">
+
+                        <h6 class="mb-3 text-muted text-uppercase fw-semibold" style="font-size: 0.75rem; letter-spacing: 0.08em;">
+                            <i class="fas fa-user-tie me-2"></i>Representante Legal
+                        </h6>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="representante_nombre" class="form-label">Nombre</label>
+                                <input type="text"
+                                       class="form-control @error('representante_nombre') is-invalid @enderror"
+                                       id="representante_nombre"
+                                       name="representante_nombre"
+                                       value="{{ old('representante_nombre', $empresa->representante_nombre) }}"
+                                       placeholder="Juan">
+                                @error('representante_nombre')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+                            <div class="col-md-6">
+                                <label for="representante_apellido" class="form-label">Apellido</label>
+                                <input type="text"
+                                       class="form-control @error('representante_apellido') is-invalid @enderror"
+                                       id="representante_apellido"
+                                       name="representante_apellido"
+                                       value="{{ old('representante_apellido', $empresa->representante_apellido) }}"
+                                       placeholder="Pérez">
+                                @error('representante_apellido')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+                        </div>
+
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <label for="representante_documento" class="form-label">Documento de Identidad</label>
+                                <input type="text"
+                                       class="form-control @error('representante_documento') is-invalid @enderror"
+                                       id="representante_documento"
+                                       name="representante_documento"
+                                       value="{{ old('representante_documento', $empresa->representante_documento) }}"
+                                       placeholder="1234567890">
+                                @error('representante_documento')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+                            <div class="col-md-6">
+                                <label for="representante_firma" class="form-label">Firma Digital</label>
+                                @if($empresa->representante_firma)
+                                    <div class="mb-2">
+                                        <img src="{{ $empresa->representante_firma_url }}"
+                                             alt="Firma del representante"
+                                             class="img-thumbnail"
+                                             style="max-height: 60px;">
+                                    </div>
+                                @endif
+                                <input type="file"
+                                       class="form-control @error('representante_firma') is-invalid @enderror"
+                                       id="representante_firma"
+                                       name="representante_firma"
+                                       accept="image/png,image/jpeg,image/jpg">
+                                <small class="text-muted">PNG, JPG o JPEG. Máximo 2MB.</small>
+                                @error('representante_firma')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+                        </div>
+
                         <div class="d-grid">
                             <button type="submit" class="btn btn-primary btn-lg">
                                 <i class="fas fa-save me-2"></i>Guardar Cambios
