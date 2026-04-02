@@ -381,7 +381,7 @@
             margin-top: 20px;
             font-size: 7.5pt;
             font-style: italic;
-            text-align: center;
+            text-align: left;
             color: #555;
             border-top: 1px solid #ccc;
             padding-top: 10px;
@@ -409,7 +409,7 @@
         }
 
         .firma-linea {
-            border-top: 1px solid #333;
+            /* border-top: 1px solid #333; */
             padding-top: 5px;
             display: inline-block;
             min-width: 150px;
@@ -431,6 +431,47 @@
         .separador {
             border-top: 1px dashed #999;
             margin: 25px 0;
+        }
+
+        /* ============ FIRMA REPRESENTANTE LEGAL ============ */
+        .firma-representante-section {
+            margin-top: 30px;
+            page-break-inside: avoid;
+            text-align: center;
+        }
+
+        .firma-representante-container {
+            display: inline-block;
+            text-align: center;
+        }
+
+        .firma-representante-imagen {
+            margin-bottom: 4px;
+            text-align: center;
+        }
+
+        .firma-representante-imagen img {
+            max-width: 180px;
+            max-height: 65px;
+        }
+
+        .firma-representante-linea {
+            /* border-top: 1px solid #333; */
+            padding-top: 5px;
+            display: inline-block;
+            min-width: 180px;
+        }
+
+        .firma-representante-datos {
+            font-size: 8pt;
+            text-align: center;
+            line-height: 1.2;
+            color: #1a1a1a;
+        }
+
+        .firma-representante-datos .cargo {
+            font-weight: bold;
+            font-size: 8pt;
         }
 
     </style>
@@ -780,6 +821,31 @@
     <div class="nota-final">
         <em>Nota: Se sugiere correlacionar con historial médico y sintomatología clínica</em>
     </div>
+
+    <!-- ============ FIRMA REPRESENTANTE LEGAL ============ -->
+    @if($empresa && $empresa->representante_firma)
+        @php
+            $rutaFirmaRepresentante = storage_path('app/public/' . $empresa->representante_firma);
+        @endphp
+        @if(file_exists($rutaFirmaRepresentante))
+            <div class="firma-representante-section">
+                <div class="firma-representante-container">
+                    <div class="firma-representante-imagen">
+                        <img src="{{ $rutaFirmaRepresentante }}" alt="Firma Representante Legal">
+                    </div>
+                    <div class="firma-representante-linea">
+                        <div class="firma-representante-datos">
+                            <div class="cargo">DIRECTOR LABORATORIO</div>
+                            {{ strtoupper($empresa->representante_nombre_completo) }}
+                            @if($empresa->representante_documento)                                &nbsp;&nbsp;C.C. {{ $empresa->representante_documento }}
+                            @endif
+                        </div>
+                    </div>
+                </div>
+            </div>
+        @endif
+    @endif
+
     </div><!-- Fin contenedor-principal -->
 
     <script type="text/php">

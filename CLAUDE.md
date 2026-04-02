@@ -70,7 +70,7 @@ User (autenticacion y auditoria)
 |--------|-------|-------------|
 | User | users | Autenticacion y auditoria |
 | Cliente | clientes | Pacientes (nombre, documento, genero, fecha_nacimiento, eps) |
-| Empresa | empresa | Datos del laboratorio (nit, razon_social, logo) - singleton |
+| Empresa | empresa | Datos del laboratorio (nit, razon_social, logo, representante_nombre, representante_apellido, representante_documento, representante_firma) - singleton |
 | Profesional | profesionales | Bacteriologos/profesionales (firma_digital, registro_profesional) |
 | CategoriaExamen | categoria_examen | Agrupacion de examenes (Hematologia, Quimica, etc.) |
 | Examen | examen | Definicion de examenes con tipo_resultado |
@@ -192,7 +192,7 @@ No se puede eliminar si tiene servicios asignados o resultados validados.
 **Vista:** `empresa/edit.blade.php`
 **Request:** `UpdateEmpresaRequest`
 
-Configuracion del laboratorio (singleton). Se crea registro por defecto si no existe. Campos: nit, razon_social, direccion, barrio, ciudad, telefono_uno, telefono_dos, email, logo (imagen en `storage/public/logos/`).
+Configuracion del laboratorio (singleton). Se crea registro por defecto si no existe. Campos: nit, razon_social, direccion, barrio, ciudad, telefono_uno, telefono_dos, email, logo (imagen en `storage/public/logos/`), representante_nombre, representante_apellido, representante_documento, representante_firma (imagen en `storage/public/firmas-representante/`).
 
 Metodo `obtenerMembreteParaPDF()` para encabezado de PDFs.
 
@@ -379,10 +379,11 @@ Evaluacion automatica al guardar resultados. Se ejecuta en `ResultadoExamen::eva
 
 ```
 storage/app/public/
-  logos/              -> Logo de la empresa
-  firmas/             -> Firmas digitales de profesionales
+  logos/                  -> Logo de la empresa
+  firmas/                 -> Firmas digitales de profesionales
+  firmas-representante/   -> Firma del representante legal de la empresa
   examenes/
-    {numeroOrden}/    -> Imagenes adjuntas por orden
+    {numeroOrden}/        -> Imagenes adjuntas por orden
 ```
 
 Acceso publico via symlink: `public/storage/ -> storage/app/public/`
