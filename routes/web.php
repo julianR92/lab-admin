@@ -67,6 +67,7 @@ Route::middleware('auth')->group(function () {
     Route::get('servicios/{servicio}/examen/{servicioExamen}/resultados-pdf', [\App\Http\Controllers\ResultadoPdfController::class, 'generarPdfIndividual'])->name('servicios.examen.resultados-pdf');
     Route::post('servicios/{servicio}/pago', [\App\Http\Controllers\ServicioController::class, 'registrarPago'])->name('servicios.registrar-pago');
     Route::post('servicio-examen/{servicioExamen}/profesional', [\App\Http\Controllers\ServicioController::class, 'asignarProfesional'])->name('servicios.asignar-profesional');
+    Route::post('servicio-examen/{servicioExamen}/fecha-toma-muestra', [\App\Http\Controllers\ServicioController::class, 'actualizarFechaTomaMuestra'])->name('servicios.actualizar-fecha-toma');
     Route::post('servicio-examen/{servicioExamen}/estado', [\App\Http\Controllers\ServicioController::class, 'cambiarEstado'])->name('servicios.cambiar-estado');
 
     // Rutas de Resultados de Exámenes

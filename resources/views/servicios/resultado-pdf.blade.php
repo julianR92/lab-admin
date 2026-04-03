@@ -732,7 +732,7 @@
                             @endif
                             <br>
                              @if($servicioExamen->fecha_resultado)
-                                <strong>Fecha:</strong>{{ $servicioExamen->fecha_resultado }}
+                                <strong>Fecha: </strong>{{ $servicioExamen->fecha_resultado }}
                             @endif
                         </td>
                         <td class="tecnica-info" style="text-align: right; vertical-align: top; width: 40%;">
@@ -823,6 +823,9 @@
                                 <div class="profesion">{{ strtoupper($servicioExamen->profesional->profesion ?? 'PROFESIONAL') }}</div>
                                 {{ strtoupper($servicioExamen->profesional->nombre) }} {{ strtoupper($servicioExamen->profesional->apellido) }}<br>
                                 {{ $servicioExamen->profesional->registro_profesional ? 'TP: ' . $servicioExamen->profesional->registro_profesional : $servicioExamen->profesional->documento }}{{ $servicioExamen->profesional->especialidad ? ' – ' . $servicioExamen->profesional->especialidad : '' }}
+                                @if($servicioExamen->fecha_validacion)
+                                    <br><span style="font-size: 8pt;">Validación: {{ $servicioExamen->fecha_validacion->format('d/m/Y H:i') }}</span>
+                                @endif
                             </div>
                         </div>
                     </div>

@@ -223,7 +223,25 @@
                                         </form>
                                     @endif
                                 </td>
-                                <td>{{ $servicioExamen->fecha_toma_muestra ? $servicioExamen->fecha_toma_muestra->format('d/m/Y H:i') : '-' }}</td>
+                                <td>
+                                    @if($servicioExamen->puedeEditarse())
+                                        <form method="POST" action="{{ route('servicios.actualizar-fecha-toma', $servicioExamen) }}" class="d-flex align-items-center gap-1">
+                                            @csrf
+                                            <input
+                                                type="datetime-local"
+                                                name="fecha_toma_muestra"
+                                                class="form-control form-control-sm"
+                                                style="min-width: 170px"
+                                                value="{{ $servicioExamen->fecha_toma_muestra ? $servicioExamen->fecha_toma_muestra->format('Y-m-d\TH:i') : '' }}"
+                                            >
+                                            <button type="submit" class="btn btn-sm btn-outline-primary" title="Guardar fecha">
+                                                <i class="fas fa-save"></i>
+                                            </button>
+                                        </form>
+                                    @else
+                                        {{ $servicioExamen->fecha_toma_muestra ? $servicioExamen->fecha_toma_muestra->format('d/m/Y H:i') : '-' }}
+                                    @endif
+                                </td>
                                 <td>{{ $servicioExamen->fecha_resultado ? $servicioExamen->fecha_resultado->format('d/m/Y H:i') : '-' }}</td>
                                 <td>
                                     <div class="btn-group btn-group-sm">

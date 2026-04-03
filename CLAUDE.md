@@ -224,6 +224,7 @@ Ordenes de trabajo del laboratorio. Al crear un servicio:
 - `GET /servicios/{id}/orden-pdf` - PDF de la orden
 - `POST /servicios/{id}/pago` - Registrar pago
 - `POST /servicio-examen/{id}/profesional` - Asignar profesional
+- `POST /servicio-examen/{id}/fecha-toma-muestra` - Actualizar fecha toma muestra manualmente
 - `POST /servicio-examen/{id}/estado` - Cambiar estado
 
 ---
@@ -296,7 +297,7 @@ Dos tipos de PDF:
 - Alertas visuales (colores de fondo para BAJO/ALTO/CRITICO)
 - Textos descriptivos (observaciones, interpretacion, conclusiones)
 - Imagenes adjuntas
-- Firma digital del profesional
+- Firma digital del profesional con `fecha_validacion` debajo del nombre
 - Pie de pagina con fecha de generacion y numero de pagina
 
 **Configuracion DomPDF:** Papel carta, vertical, fuente Carlito, remote enabled.
@@ -355,6 +356,8 @@ PENDIENTE -> EN_PROCESO -> COMPLETADO -> VALIDADO -> ENTREGADO
 | ENTREGADO | Entregado al paciente | No | Si |
 
 Transiciones controladas en `ServicioController@cambiarEstado`. Cada cambio actualiza timestamps: `fecha_toma_muestra`, `fecha_resultado`, `fecha_validacion`, `fecha_entrega`.
+
+**`fecha_toma_muestra`**: Se asigna automaticamente a `now()` al transicionar a EN_PROCESO (solo si es null). Tambien es editable manualmente desde `show.blade.php` via `ServicioController@actualizarFechaTomaMuestra` mientras el estado sea PENDIENTE, EN_PROCESO o COMPLETADO (`puedeEditarse() = true`). Request: `ActualizarFechaTomaMuestraRequest`.
 
 ---
 

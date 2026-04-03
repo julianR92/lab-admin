@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\ActualizarFechaTomaMuestraRequest;
 use App\Http\Requests\StoreServicioRequest;
 use App\Http\Requests\UpdateServicioRequest;
-use App\Models\Cliente;
 use App\Models\Examen;
 use App\Models\Profesional;
 use App\Models\Servicio;
@@ -297,6 +297,18 @@ class ServicioController extends Controller
         $servicioExamen->save();
 
         return back()->with('success', 'Profesional asignado exitosamente.');
+    }
+
+    public function actualizarFechaTomaMuestra(ActualizarFechaTomaMuestraRequest $request, ServicioExamen $servicioExamen): \Illuminate\Http\RedirectResponse
+    {
+        if (! $servicioExamen->puedeEditarse()) {
+            return back()->with('error', 'No se puede modificar la fecha de toma de muestra en el estado actual del examen.');
+        }
+
+        $servicioExamen->fecha_toma_muestra = $request->fecha_toma_muestra;
+        $servicioExamen->save();
+
+        return back()->with('success', 'Fecha de toma de muestra actualizada exitosamente.');
     }
 
     public function cambiarEstado(Request $request, ServicioExamen $servicioExamen)
