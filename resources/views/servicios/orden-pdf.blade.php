@@ -56,8 +56,8 @@
         <div class="header">
             <div class="header-content">
                 <div class="logo-section">
-                    @if($empresa->logo)
-                        <img src="{{ public_path('storage/' . $empresa->logo) }}" alt="Logo">
+                    @if($empresa && $empresa->logo)
+                        <img src="{{ storage_path('app/public/' . $empresa->logo) }}" alt="Logo">
                     @else
                         <div style="width: 100px; height: 70px; border: 1px solid #000; display: flex; align-items: center; justify-content: center;"><span style="font-size: 8px;">LOGO</span></div>
                     @endif

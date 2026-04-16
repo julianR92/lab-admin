@@ -2,7 +2,7 @@
 
 ## Descripcion General
 
-Sistema web para la gestion integral de un laboratorio clinico. Permite administrar pacientes, configurar examenes parametrizables, crear ordenes de servicio, capturar resultados con evaluacion automatica contra valores de referencia, y generar reportes PDF profesionales.
+Sistema web para la gestion integral de un laboratorio clinico. Permite administrar pacientes, configurar examenes parametrizables, crear ordenes de servicio, capturar resultados con evaluacion automatica contra valores de referencia contextuales (genero, edad, condicion especial) y generar reportes PDF profesionales con firma digital.
 
 **Stack tecnologico:**
 - Backend: Laravel 12 (PHP), Eloquent ORM
@@ -56,8 +56,9 @@ Cliente --hasMany--> Servicio --hasMany--> ServicioExamen --hasMany--> Resultado
                                               |--hasMany--> ResultadoAdjunto
                                               |--belongsTo--> Examen
                                               |--belongsTo--> Profesional
-                                              
+
 Examen --hasMany--> ExamenParametro --hasMany--> ExamenValorReferencia
+   |--hasMany--> ExamenValorReferencia (valores sin parametro, a nivel examen)
    |--belongsTo--> CategoriaExamen
 
 Empresa (singleton, datos del laboratorio)
@@ -70,274 +71,249 @@ User (autenticacion y auditoria)
 |--------|-------|-------------|
 | User | users | Autenticacion y auditoria |
 | Cliente | clientes | Pacientes (nombre, documento, genero, fecha_nacimiento, eps) |
-| Empresa | empresa | Datos del laboratorio (nit, razon_social, logo, representante_nombre, representante_apellido, representante_documento, representante_firma) - singleton |
+| Empresa | empresa | Datos del laboratorio (nit, razon_social, logo, representante_*) - singleton |
 | Profesional | profesionales | Bacteriologos/profesionales (firma_digital, registro_profesional) |
 | CategoriaExamen | categoria_examen | Agrupacion de examenes (Hematologia, Quimica, etc.) |
 | Examen | examen | Definicion de examenes con tipo_resultado |
 | ExamenParametro | examen_parametros | Campos a capturar por examen (tipo_dato, formula, opciones) |
-| ExamenValorReferencia | examen_valores_referencia | Rangos normales contextuales (genero, edad) |
+| ExamenValorReferencia | examen_valores_referencia | Rangos/valores de referencia contextuales |
 | Servicio | servicio | Ordenes de laboratorio con pago |
 | ServicioExamen | servicio_examen | Examenes dentro de una orden con estado |
-| ResultadoExamen | resultados_examen | Valores capturados y evaluacion automatica |
+| ResultadoExamen | resultados_examen | Valores capturados + evaluacion automatica |
 | ResultadoAdjunto | resultado_adjuntos | Imagenes adjuntas a resultados |
 
 ---
 
-## Modulos
+## Configuracion y Parametrizacion de Examenes (MODULO CENTRAL)
 
-### 1. Autenticacion
+La parametrizacion de examenes es el corazon del sistema. Un examen tiene **3 niveles jerarquicos** que se configuran independientemente:
 
-**Controlador:** `Auth/LoginController`
-**Vistas:** `auth/login.blade.php`, `auth/forgot-password.blade.php`, `auth/reset-password.blade.php`
+```
+Examen (cabecera)
+  └── ExamenParametro[]  (campos a capturar)
+        └── ExamenValorReferencia[]  (rangos/valores de referencia, contextuales)
+```
 
-Login con sesion en BD (120 min). Sin registro publico. Recuperacion de contrasena por email.
+Los valores de referencia tambien pueden definirse a nivel examen (sin parametro_id) cuando el examen tiene un solo resultado logico.
 
-**Rutas:**
-- `GET/POST /login` - Iniciar sesion
-- `POST /logout` - Cerrar sesion
-- `GET/POST /forgot-password` - Recuperar contrasena
-- `GET/POST /reset-password/{token}` - Restablecer contrasena
+### Nivel 1: Examen (cabecera)
 
----
+Tabla `examen` - Controlador `ExamenController`, vistas `examenes/{create,edit,show}.blade.php`.
 
-### 2. Dashboard
+**Campos clave:**
+- `codigo` (unique, string 20) - Identificador corto del examen (ej: GLU, HEM3, URO)
+- `nombre` (string 255) - Nombre descriptivo
+- `categoria_id` - FK a categoria_examen
+- **`tipo_resultado`** (enum) - **CRITICO: define la vista de captura y la logica de evaluacion**
+- `unidad_medida` - Unidad base del examen (puede sobrescribirse en parametros)
+- `tecnica` - Metodologia (ej: "Colorimetrico", "Ziehl-Neelsen")
+- `muestra_requerida` - Tipo de muestra (Sangre, Orina, Esputo, etc.)
+- `valor_total` / `valor_remision` - Precios
+- `tiempo_entrega` - Horas (1-720)
+- `requiere_ayuno` (boolean), `instrucciones_paciente` (text)
+- `status` (boolean)
 
-**Vista:** `dashboard.blade.php`
-**Ruta:** `GET /dashboard`
+**Valores validos de `tipo_resultado`** (definidos en `ExamenController::getTiposResultado()`):
+1. `NUMERICO_SIMPLE`
+2. `NUMERICO_CATEGORIZADO`
+3. `CUALITATIVO_SIMPLE`
+4. `CUALITATIVO_MULTIPLE_OPCIONES`
+5. `MULTIPLE_CALCULADO`
+6. `TABLA_HEMATOLOGIA`
+7. `TEXTO_DESCRIPTIVO`
 
-Metricas principales: totalPacientes, examenesPendientes, resultadosValidados, ingresosHoy.
+**Nota:** El `tipo_resultado` NO se valida contra los parametros automaticamente; el administrador debe configurar parametros y valores de referencia coherentes con el tipo elegido.
 
----
+### Nivel 2: ExamenParametro
 
-### 3. Clientes (Pacientes)
+Tabla `examen_parametros` - Controlador `ExamenParametroController`, modal AJAX en `examenes/show.blade.php`.
 
-**Controlador:** `ClienteController` + `Api/ClienteController`
-**Vistas:** `clientes/index|create|edit|show.blade.php`
-**Requests:** `StoreClienteRequest`, `UpdateClienteRequest`
+**Campos clave:**
+- `examen_id` - FK al examen
+- `nombre_parametro` - Etiqueta visible (ej: "Hemoglobina")
+- `codigo_parametro` - Codigo unico por examen, **mayusculas + digitos + underscore** (regex `/^[A-Z0-9_]+$/`)
+- `seccion` - Agrupacion para acordeones (ej: "Fisico", "Quimico", "Microscopico"). Solo letras y espacios
+- **`tipo_dato`** (enum) - Define el control HTML y el campo donde se guarda el valor:
+  - `DECIMAL` - Input numerico con decimales, se guarda en `valor_numerico`
+  - `INTEGER` - Input numerico entero, se guarda en `valor_numerico`
+  - `TEXT` - Input/textarea texto libre, se guarda en `valor_texto`
+  - `SELECT` - Dropdown, se guarda en `valor_cualitativo`
+- `unidad_medida` - Unidad especifica del parametro
+- `decimales` (0-4) - Solo aplica para DECIMAL
+- `orden` - Orden de visualizacion
+- `requerido` (boolean) - Obligatorio en captura
+- **`es_calculado`** (boolean) - Si true, el valor se calcula con `formula_calculo`
+- **`formula_calculo`** (JSON) - REQUERIDO cuando `es_calculado=1`:
+  ```json
+  {
+    "formula": "(P1 * P2) / P3",
+    "parametros": ["P1", "P2", "P3"],
+    "descripcion": "Texto opcional"
+  }
+  ```
+- **`opciones_select`** (JSON array) - REQUERIDO cuando `tipo_dato=SELECT`:
+  ```json
+  ["NEGATIVO", "POSITIVO +", "POSITIVO ++", "POSITIVO +++"]
+  ```
+- `mostrar_todos_rangos` (boolean, default false) - Si true, en la vista de resultados y en el PDF se muestran TODOS los valores de referencia del parametro en lugar del unico rango donde cayo el valor. Util para examenes como HCG por semanas de gestacion
+- `status` (boolean)
 
-CRUD completo de pacientes. Campos clave: nombre, apellido, tipo_documento (CC/TI/CE/PA/RC), documento (unique), genero (M/F/O), fecha_nacimiento, telefono, email, ciudad, eps.
+**Limpieza automatica en controlador** (`ExamenParametroController@store/update`):
+- Si `es_calculado=0` -> limpia `formula_calculo`
+- Si `tipo_dato != SELECT` -> limpia `opciones_select`
+- Si `tipo_dato != DECIMAL` -> limpia `decimales`
 
-**Scopes:** `buscar()` (nombre/documento), `porDocumento()`
-**Accessors:** `nombreCompleto`, `edad` (calculada desde fecha_nacimiento)
+### Nivel 3: ExamenValorReferencia
 
-**Rutas:**
-- `resource clientes` - CRUD estandar
-- `GET /api/clientes/buscar` - Busqueda AJAX para selects
+Tabla `examen_valores_referencia` - Controlador `ExamenValorReferenciaController`, modal AJAX en `examenes/show.blade.php`.
 
----
+**Campos clave:**
+- `examen_id` - FK obligatorio
+- `parametro_id` - FK nullable. Si es NULL, el valor aplica al examen completo (util para examenes de 1 solo resultado)
+- **`tipo_referencia`** (enum) - Define como se evalua:
+  - `RANGO` - Valor numerico dentro de [valor_min, valor_max]
+  - `CUALITATIVO` - Comparacion exacta contra `valor_cualitativo`
+  - `CATEGORIZADO` - Asignacion de `categoria` segun rango o `operador`
+  - `INFORMATIVO` - Solo muestra `descripcion`, no evalua
+- **Filtros de contexto** (todos opcionales, permiten tener multiples valores por parametro):
+  - `genero` (M/F/null) - null = aplica a ambos
+  - `edad_min` / `edad_max` (0-120)
+  - `condicion_especial` (string) - Embarazo, diabetes, etc.
+- **Valores segun tipo_referencia:**
+  - RANGO: `valor_min`, `valor_max` (ambos requeridos)
+  - CUALITATIVO: `valor_cualitativo` (requerido)
+  - CATEGORIZADO: `valor_min`, `valor_max`, `categoria` (requerido), `operador` opcional (<, <=, >, >=, ==)
+  - INFORMATIVO: solo `descripcion`
+- `orden` - Prioridad de evaluacion (menor numero = mayor prioridad)
+- `status` (boolean)
 
-### 4. Categorias de Examen
-
-**Controlador:** `CategoriaExamenController`
-**Vistas:** `categorias-examen/index|create|edit|show.blade.php`
-**Requests:** `StoreCategoriaExamenRequest`, `UpdateCategoriaExamenRequest`
-
-Agrupacion logica de examenes (Hematologia, Quimica Sanguinea, Uroanalisis, etc.). Campos: categoria, descripcion, status, orden. No se puede eliminar si tiene examenes asociados.
-
----
-
-### 5. Examenes
-
-**Controlador:** `ExamenController`, `ExamenParametroController`, `ExamenValorReferenciaController`
-**Vistas:** `examenes/index|create|edit|show.blade.php`
-**Requests:** 6 form requests (Store/Update para Examen, Parametro, ValorReferencia)
-
-Modulo central de configuracion. Un examen tiene:
-
-**Nivel Examen:**
-- `tipo_resultado`: Define la vista de captura (ver seccion Tipos de Resultado)
-- `codigo` (unique), `nombre`, `categoria_id`
-- `unidad_medida`, `tecnica`, `muestra_requerida`
-- `valor_total`, `valor_remision`, `tiempo_entrega`
-- `requiere_ayuno`, `instrucciones_paciente`
-
-**Nivel Parametro (ExamenParametro):**
-- `nombre_parametro`, `codigo_parametro` (unique por examen)
-- `tipo_dato`: DECIMAL, INTEGER, TEXT, SELECT
-- `seccion`: Agrupa parametros en acordeones
-- `es_calculado` + `formula_calculo` (JSON: `{formula, parametros}`)
-- `opciones_select` (JSON array para tipo SELECT)
-- `unidad_medida`, `decimales`, `orden`, `requerido`
-- `mostrar_todos_rangos` (BOOLEAN, default false): Si true, en la vista de resultados y en el PDF se muestran TODOS los valores de referencia del parametro en vez del unico rango donde cayo el valor. Util para examenes como HCG (hormona del embarazo) donde el medico necesita ver todos los rangos por semana de gestacion
-
-**Nivel Valor de Referencia (ExamenValorReferencia):**
-- `tipo_referencia`: RANGO, CUALITATIVO, CATEGORIZADO, INFORMATIVO
-- Contexto: `genero` (M/F/null), `edad_min`, `edad_max`, `condicion_especial`
-- Para RANGO: `valor_min`, `valor_max`, `operador`
-- Para CUALITATIVO: `valor_cualitativo`
-- Para CATEGORIZADO: `categoria`, `valor_min`, `valor_max`
-- `orden` (prioridad de evaluacion)
-
-**Rutas:**
-- `resource examenes` - CRUD
-- `POST/GET/PUT/DELETE /examen-parametros/{id?}` - CRUD parametros
-- `POST/GET/PUT/DELETE /examen-valores-referencia/{id?}` - CRUD valores referencia
-
----
-
-### 6. Profesionales
-
-**Controlador:** `ProfesionalController`
-**Vistas:** `profesionales/index|create|edit|show.blade.php`
-**Requests:** `StoreProfesionalRequest`, `UpdateProfesionalRequest`
-
-Registro de bacteriologos y profesionales de salud. Campos clave: nombre, apellido, documento (unique), profesion, registro_profesional (unique), especialidad, firma_digital (imagen max 2MB almacenada en `storage/public/firmas/`), telefono, email, status.
-
-No se puede eliminar si tiene servicios asignados o resultados validados.
-
----
-
-### 7. Empresa (Configuracion)
-
-**Controlador:** `EmpresaController`
-**Vista:** `empresa/edit.blade.php`
-**Request:** `UpdateEmpresaRequest`
-
-Configuracion del laboratorio (singleton). Se crea registro por defecto si no existe. Campos: nit, razon_social, direccion, barrio, ciudad, telefono_uno, telefono_dos, email, logo (imagen en `storage/public/logos/`), representante_nombre, representante_apellido, representante_documento, representante_firma (imagen en `storage/public/firmas-representante/`).
-
-Metodo `obtenerMembreteParaPDF()` para encabezado de PDFs.
-
-**Rutas:**
-- `GET /empresa/configuracion` - Formulario
-- `PUT /empresa/configuracion` - Actualizar
-- `DELETE /empresa/logo` - Eliminar logo
+**Limpieza automatica en controlador** (`ExamenValorReferenciaController@store/update`):
+- Segun `tipo_referencia` se limpian los campos que no aplican para evitar basura en BD.
 
 ---
 
-### 8. Servicios (Ordenes de Laboratorio)
+## Guia de Parametrizacion por Tipo de Examen
 
-**Controlador:** `ServicioController`
-**Vistas:** `servicios/index|create|edit|show.blade.php`, `servicios/orden-pdf.blade.php`
-**Requests:** `StoreServicioRequest`, `UpdateServicioRequest`
+Esta seccion es la referencia para configurar un examen nuevo. Para cada `tipo_resultado` se describe: cuantos parametros crear, que `tipo_dato` usar, que valores de referencia definir, y la vista de captura que se usara automaticamente.
 
-Ordenes de trabajo del laboratorio. Al crear un servicio:
-1. Se selecciona cliente y examenes (agrupados por categoria)
-2. Se genera `numero_orden` automatico: `ORD-YYYYMMDD-XXXX`
-3. Se calcula `valor_total` sumando precios de examenes
-4. Se crea un `ServicioExamen` por cada examen seleccionado
-5. Se determina `estado_pago`: PENDIENTE, PARCIAL, PAGADO
+### 1. NUMERICO_SIMPLE
+**Ejemplo:** Glicemia, Creatinina, TSH
 
-**Vista show.blade.php** es el hub principal: muestra examenes, permite asignar profesional, cambiar estado, capturar resultados, registrar pagos y descargar PDFs.
+- **Parametros:** 1 con `tipo_dato=DECIMAL` o `INTEGER`
+- **Valores de referencia:** Uno o varios `tipo_referencia=RANGO` (puede haber varios para distintos genero/edad)
+- **Vista de captura:** `resultados/tipos/estandar.blade.php` (1 input numerico)
+- **Evaluacion:**
+  - Si `valor < valor_min` -> `tipo_alerta=BAJO`, `fuera_rango=true`
+  - Si `valor > valor_max` -> `tipo_alerta=ALTO`, `fuera_rango=true`
+  - Valores muy extremos -> `CRITICO` + `requiere_revision=true`
 
-**Rutas:**
-- `resource servicios` - CRUD
-- `GET /servicios/{id}/orden-pdf` - PDF de la orden
-- `POST /servicios/{id}/pago` - Registrar pago
-- `POST /servicio-examen/{id}/profesional` - Asignar profesional
-- `POST /servicio-examen/{id}/fecha-toma-muestra` - Actualizar fecha toma muestra manualmente
-- `POST /servicio-examen/{id}/estado` - Cambiar estado
+### 2. NUMERICO_CATEGORIZADO
+**Ejemplo:** Colesterol Total, Trigliceridos, Indice VIH
 
----
+- **Parametros:** 1 con `tipo_dato=DECIMAL`
+- **Valores de referencia:** Varios `tipo_referencia=CATEGORIZADO`, ordenados por `orden`. Cada uno con `categoria` (ej: "Optimo", "Intermedio Alto", "Alto")
+- **Vista de captura:** `resultados/tipos/estandar.blade.php` (input numerico)
+- **Evaluacion:** Itera por orden, asigna la categoria cuyo rango contiene el valor; guarda `categoria_asignada` y `rango_referencia` (ej: "200-239 mg/dL - Intermedio Alto")
 
-### 9. Resultados de Examenes
+### 3. CUALITATIVO_SIMPLE
+**Ejemplo:** Hemoclasificacion, Prueba de Embarazo, Dengue IgM
 
-**Controlador:** `ResultadoExamenController`
-**Vistas:** `resultados/create.blade.php`, `resultados/show.blade.php`, `resultados/tipos/*.blade.php`
+- **Parametros:** 1-3 con `tipo_dato=SELECT` y `opciones_select` definido
+- **Valores de referencia:** `tipo_referencia=CUALITATIVO` con `valor_cualitativo` = valor esperado (ej: "NEGATIVO")
+- **Vista de captura:** `resultados/tipos/estandar.blade.php` (SELECT dropdowns)
+- **Evaluacion:** Si `valor_cualitativo != valor_esperado` -> `tipo_alerta=ALTO`, `fuera_rango=true`
 
-Modulo mas complejo del sistema. Captura valores segun el `tipo_resultado` del examen y evalua automaticamente contra valores de referencia.
+### 4. CUALITATIVO_MULTIPLE_OPCIONES
+**Ejemplo:** Uroanalisis (Fisico, Quimico, Microscopico)
 
-**Flujo de captura:**
-1. `create()` carga parametros agrupados por seccion y valores de referencia aplicables al paciente
-2. Se renderiza la vista de tipo correspondiente (ver Tipos de Resultado)
-3. `store()` recibe JSON via AJAX, itera parametros, asigna valores, evalua, guarda
-4. Si hay alertas CRITICAS, retorna warnings en la respuesta JSON
-5. Cambia estado del ServicioExamen a COMPLETADO
+- **Parametros:** 5-50 organizados por `seccion`. Mezcla de `tipo_dato=SELECT` (con opciones) y `TEXT` (texto libre)
+- **Valores de referencia:** Por parametro, tipicamente `CUALITATIVO` con el valor normal esperado
+- **Vista de captura:** `resultados/tipos/cualitativo-multiple.blade.php` (acordeon por seccion)
+- **Evaluacion:** Campo por campo contra su valor de referencia
 
-**Metodo `asignarValor()`**: Asigna el valor al campo correcto segun `tipo_dato`:
-- DECIMAL/INTEGER -> `valor_numerico`
-- SELECT -> `valor_cualitativo`
-- TEXT/TEXTO_LARGO -> `valor_texto`
+### 5. MULTIPLE_CALCULADO
+**Ejemplo:** Clearance Creatinina, Microalbuminuria, HOMA-IR
 
-**Metodo `evaluar()`** en ResultadoExamen:
-1. Busca el valor de referencia aplicable (filtrado por genero/edad del paciente)
-2. Compara el valor capturado contra el rango/cualitativo/categoria
-3. Asigna `tipo_alerta`: NORMAL, BAJO, ALTO, CRITICO
-4. Marca `fuera_rango = true` si aplica
-5. Marca `requiere_revision = true` si es CRITICO
+- **Parametros:**
+  - 2+ con `es_calculado=false` (capturados manualmente)
+  - 1+ con `es_calculado=true` y `formula_calculo` definido
+- **Valores de referencia:** `RANGO` o `CATEGORIZADO`, especialmente sobre los parametros calculados
+- **Vista de captura:** `resultados/tipos/multiple-parametros.blade.php` (inputs normales + readonly para calculados + boton "Calcular Ahora")
+- **Evaluacion:**
+  - Tras capturar manuales, se calculan los derivados via `ResultadoExamenController::calcularParametrosCalculados()`
+  - La formula se evalua reemplazando `codigo_parametro` por valores. Regex de seguridad: `/^[0-9+\-*/().]+$/`
+  - Cada parametro (manual y calculado) se evalua individualmente contra su valor de referencia
+- **Validacion clave:** No se puede guardar si faltan manuales requeridos
 
-**Rutas:**
-- `GET /servicio-examen/{id}/resultados/create` - Formulario de captura
-- `POST /servicio-examen/{id}/resultados` - Guardar (JSON)
-- `GET /servicio-examen/{id}/resultados` - Ver resultados
+### 6. TABLA_HEMATOLOGIA
+**Ejemplo:** Hemograma III (Serie Roja, Serie Blanca, Plaquetas)
 
----
+- **Parametros:** 15-30 con `tipo_dato=DECIMAL`, agrupados por `seccion`
+- **Valores de referencia:** `RANGO` por parametro, tipicamente con filtros de `genero` (Hb, Hto difieren M/F) y `edad_min/edad_max`
+- **Vista de captura:** `resultados/tipos/multiple-parametros.blade.php` (tabla compacta)
+- **Evaluacion:** Cada parametro individualmente
 
-### 10. Adjuntos de Resultados
+### 7. TEXTO_DESCRIPTIVO
+**Ejemplo:** Baciloscopia, Coloracion de Gram, Urocultivo
 
-**Controlador:** `ResultadoAdjuntoController`
-**Vista parcial:** `resultados/partials/galeria-adjuntos.blade.php`
-**JS:** `public/js/galeria-adjuntos.js`
-**Request:** `StoreResultadoAdjuntoRequest`
-
-Imagenes asociadas a examenes (ECG, radiografias, etc.). Max 3 archivos por examen. Formatos: jpg, jpeg, png, gif, webp (max 10MB). Se almacenan en `storage/public/examenes/{numeroOrden}/`.
-
-**Rutas (todas retornan JSON):**
-- `GET /servicio-examen/{id}/adjuntos` - Listar
-- `POST /servicio-examen/{id}/adjuntos` - Subir imagen
-- `DELETE /servicio-examen/{id}/adjuntos/{adjuntoId}` - Eliminar
-- `GET /servicio-examen/{id}/adjuntos/{adjuntoId}/download` - Descargar
-- `GET /servicio-examen/{id}/adjuntos/download-all` - Descargar ZIP
-- `POST /servicio-examen/{id}/adjuntos/orden` - Reordenar
+- **Parametros:** 0-5 (opcionales: SELECT/TEXT estructurados + descripciones libres)
+- **Valores de referencia:** Tipicamente `INFORMATIVO` o ninguno (el profesional interpreta)
+- **Vista de captura:** `resultados/tipos/texto-descriptivo.blade.php`:
+  - Campos estructurados opcionales (SELECT/TEXT)
+  - 3 TEXTAREAS en `resultados_examen`: `observaciones`, `interpretacion` (requerido), `conclusiones` (requerido)
+- **Peculiaridad critica:** Si el examen NO tiene parametros configurados, `ResultadoExamenController@store` crea automaticamente uno llamado "Descripcion" con `codigo_parametro=DESC`, `tipo_dato=TEXT`
+- **Evaluacion:** No aplica rangos. Siempre marca `requiere_revision=true`
 
 ---
 
-### 11. Generacion de PDF
+## Flujo de Captura de Resultados
 
-**Controlador:** `ResultadoPdfController`
-**Vista:** `servicios/resultado-pdf.blade.php`, `servicios/orden-pdf.blade.php`
+**Controlador:** `ResultadoExamenController`, **Vistas:** `resultados/create.blade.php` + `resultados/tipos/*.blade.php`
 
-Dos tipos de PDF:
-1. **Orden de servicio** (`descargarOrden`): Lista de examenes solicitados con precios
-2. **Resultados** (`generarPdf`/`generarPdfIndividual`): Reporte completo de resultados validados
+### 1. Validaciones previas (create)
+- Debe existir `servicio_examen.profesional_id` (profesional asignado) para capturar
+- Estado del examen debe permitir captura (PENDIENTE -> EN_PROCESO automaticamente, no ENTREGADO)
+- Se calcula el `contexto` del paciente: `{genero, edad, condicion_especial}` desde `Cliente`
 
-**PDF de Resultados incluye:**
-- Encabezado con logo y datos de la empresa
-- Datos del paciente y la orden
-- Por cada examen VALIDADO: tabla de parametros, valores, unidades, rangos de referencia
-- Alertas visuales (colores de fondo para BAJO/ALTO/CRITICO)
-- Textos descriptivos (observaciones, interpretacion, conclusiones)
-- Imagenes adjuntas
-- Firma digital del profesional con `fecha_validacion` debajo del nombre
-- Pie de pagina con fecha de generacion y numero de pagina
+### 2. Renderizado dinamico
+- `create.blade.php` hace `@include` del parcial segun `examen.tipo_resultado`
+- Parametros se cargan agrupados por `seccion`
+- Valores de referencia se filtran por contexto del paciente
 
-**Configuracion DomPDF:** Papel carta, vertical, fuente Carlito, remote enabled.
-**Nombre archivo:** `Resultado_{documento}_{nombre}_{apellido}.pdf`
+### 3. Guardado (store, via AJAX POST con JSON)
+```php
+DB::beginTransaction()
+foreach ($resultados as $parametroId => $data) {
+    $resultado = ResultadoExamen::firstOrNew([...]);
+    $this->asignarValor($resultado, $parametro, $data);  // segun tipo_dato
+    $resultado->evaluar($contexto);                       // auto-evaluacion
+    $resultado->save();
+    if ($resultado->esCritico()) $warnings[] = ...;
+}
+$this->calcularParametrosCalculados($servicioExamen, $contexto);
+$servicioExamen->update(['estado' => 'COMPLETADO', 'fecha_resultado' => now()]);
+DB::commit()
+```
 
-**Rutas:**
-- `GET /servicios/{id}/resultados-pdf` - PDF completo del servicio
-- `GET /servicios/{id}/examen/{servicioExamenId}/resultados-pdf` - PDF individual
+### 4. Metodo `asignarValor()` - Mapea `tipo_dato` a columna
+- `DECIMAL|INTEGER` -> `valor_numerico`
+- `SELECT` -> `valor_cualitativo`
+- `TEXT` -> `valor_texto`
+- Textos descriptivos (TEXTO_DESCRIPTIVO) -> `observaciones`, `interpretacion`, `conclusiones`
 
----
-
-### 12. Perfil de Usuario
-
-**Controlador:** `PerfilController`
-**Vista:** `perfil/edit.blade.php`
-
-Edicion de nombre y contrasena del usuario autenticado. Requiere contrasena actual para cambiar contrasena.
-
-**Rutas:**
-- `GET /perfil` - Formulario
-- `PUT /perfil` - Actualizar
-
----
-
-## Tipos de Resultado de Examenes
-
-El campo `examen.tipo_resultado` determina que vista Blade se usa para capturar resultados:
-
-| Tipo | Vista | Descripcion | Ejemplo |
-|------|-------|-------------|---------|
-| NUMERICO_SIMPLE | `tipos/estandar.blade.php` | 1 valor numerico con rango | Glicemia |
-| NUMERICO_CATEGORIZADO | `tipos/estandar.blade.php` | 1 valor numerico con categorias | Colesterol |
-| CUALITATIVO_SIMPLE | `tipos/estandar.blade.php` | 1-3 SELECTs cualitativos | Hemoclasificacion |
-| CUALITATIVO_MULTIPLE_OPCIONES | `tipos/cualitativo-multiple.blade.php` | 5-50 campos en secciones/acordeones | Uroanalisis |
-| MULTIPLE_CALCULADO | `tipos/multiple-parametros.blade.php` | Valores manuales + calculados con formulas | Clearance Creatinina |
-| TABLA_HEMATOLOGIA | `tipos/multiple-parametros.blade.php` | 15-30 valores numericos en tabla | Hemograma III |
-| TEXTO_DESCRIPTIVO | `tipos/texto-descriptivo.blade.php` | Texto libre: observaciones, interpretacion, conclusiones | Baciloscopia |
-
-**Parciales compartidos:**
-- `tipos/partials/fila-parametro.blade.php` - Fila individual de parametro
+### 5. Metodo `ResultadoExamen::evaluar($contexto)`
+```php
+$valorRef = $this->obtenerValorReferenciaAplicable($contexto);
+// Filtra por parametro_id, genero, edad, condicion, ordena por 'orden'
+// Para CATEGORIZADO: busca el rango donde cae el valor
+$evaluacion = $valorRef->evaluarValor($this->valorPrincipal);
+$this->fuera_rango = !$evaluacion['dentro_rango'];
+$this->tipo_alerta = $evaluacion['tipo_alerta'];
+$this->categoria_asignada = $evaluacion['categoria'];
+$this->valor_referencia_id = $valorRef->id;
+$this->rango_referencia = $valorRef->rango_texto;
+if ($this->esCritico()) $this->requiere_revision = true;
+```
 
 ---
 
@@ -355,27 +331,128 @@ PENDIENTE -> EN_PROCESO -> COMPLETADO -> VALIDADO -> ENTREGADO
 | VALIDADO | Aprobado por profesional | No (solo admin) | Si |
 | ENTREGADO | Entregado al paciente | No | Si |
 
-Transiciones controladas en `ServicioController@cambiarEstado`. Cada cambio actualiza timestamps: `fecha_toma_muestra`, `fecha_resultado`, `fecha_validacion`, `fecha_entrega`.
+Transiciones en `ServicioController@cambiarEstado`. Cada cambio actualiza timestamps: `fecha_toma_muestra`, `fecha_resultado`, `fecha_validacion`, `fecha_entrega`.
 
-**`fecha_toma_muestra`**: Se asigna automaticamente a `now()` al transicionar a EN_PROCESO (solo si es null). Tambien es editable manualmente desde `show.blade.php` via `ServicioController@actualizarFechaTomaMuestra` mientras el estado sea PENDIENTE, EN_PROCESO o COMPLETADO (`puedeEditarse() = true`). Request: `ActualizarFechaTomaMuestraRequest`.
+**`fecha_toma_muestra`:** Se asigna a `now()` al transicionar a EN_PROCESO (solo si es null). Editable manualmente desde `show.blade.php` via `ServicioController@actualizarFechaTomaMuestra` mientras el estado sea PENDIENTE/EN_PROCESO/COMPLETADO (`puedeEditarse()=true`). Request: `ActualizarFechaTomaMuestraRequest`.
 
 ---
 
 ## Sistema de Alertas
 
-Evaluacion automatica al guardar resultados. Se ejecuta en `ResultadoExamen::evaluar()`.
+Constantes en `ResultadoExamen`: `ALERTA_NORMAL`, `ALERTA_BAJO`, `ALERTA_ALTO`, `ALERTA_CRITICO`.
 
 | tipo_alerta | Condicion | Color Bootstrap | Icono | Accion |
 |-------------|-----------|-----------------|-------|--------|
-| NORMAL | Dentro del rango | success (verde) | check | Ninguna |
-| BAJO | Debajo del minimo | info (azul) | arrow-down | Informativa |
-| ALTO | Encima del maximo | warning (amarillo) | arrow-up | Importante |
-| CRITICO | Muy fuera de rango | danger (rojo) | exclamation-triangle | requiere_revision=true |
+| NORMAL | Dentro del rango | success (verde) | check (✓) | Ninguna |
+| BAJO | Debajo del minimo | info (azul) | arrow-down (↓) | Informativa |
+| ALTO | Encima del maximo | warning (amarillo) | arrow-up (↑) | Importante |
+| CRITICO | Muy fuera de rango | danger (rojo) | exclamation-triangle (⚠) | requiere_revision=true |
 
 **Colores en PDF:**
-- BAJO: fondo `#fff3cd`, simbolo down-arrow
-- ALTO: fondo `#f8d7da`, simbolo up-arrow
-- CRITICO: fondo `#dc3545` con texto blanco, simbolo warning
+- BAJO: fondo `#fff3cd`
+- ALTO: fondo `#f8d7da`
+- CRITICO: fondo `#dc3545` + texto blanco
+
+---
+
+## Modulos del Sistema
+
+### 1. Autenticacion
+**Controlador:** `Auth/LoginController`. Sin registro publico. Sesion 120 min. Recuperacion por email.
+**Rutas:** `/login`, `/logout`, `/forgot-password`, `/reset-password/{token}`
+
+### 2. Dashboard
+**Vista:** `dashboard.blade.php`. Metricas: totalPacientes, examenesPendientes, resultadosValidados, ingresosHoy.
+
+### 3. Clientes (Pacientes)
+**Controlador:** `ClienteController` + `Api/ClienteController`
+CRUD de pacientes. Campos: nombre, apellido, tipo_documento (CC/TI/CE/PA/RC), documento (unique), genero (M/F/O), fecha_nacimiento, telefono, email, ciudad, eps.
+**Scopes:** `buscar()`, `porDocumento()`. **Accessors:** `nombreCompleto`, `edad`.
+**Rutas:** `resource clientes`, `GET /api/clientes/buscar` (AJAX para selects).
+
+### 4. Categorias de Examen
+**Controlador:** `CategoriaExamenController`
+Agrupacion logica de examenes. Campos: categoria, descripcion, status, orden. No se puede eliminar si tiene examenes asociados.
+
+### 5. Examenes
+Ver seccion completa arriba ("Configuracion y Parametrizacion de Examenes").
+**Rutas:**
+- `resource examenes`
+- `POST/PUT/DELETE /examen-parametros/{id?}`
+- `POST/PUT/DELETE /examen-valores-referencia/{id?}`
+
+### 6. Profesionales
+**Controlador:** `ProfesionalController`
+Bacteriologos y profesionales. Campos: nombre, apellido, documento (unique), profesion, registro_profesional (unique), especialidad, firma_digital (max 2MB en `storage/public/firmas/`), telefono, email, status. No se elimina si tiene servicios o validaciones.
+
+### 7. Empresa (Singleton)
+**Controlador:** `EmpresaController`
+Datos del laboratorio. Se crea por defecto si no existe. Campos: nit, razon_social, direccion, barrio, ciudad, telefono_uno, telefono_dos, email, logo (`storage/public/logos/`), representante_nombre/apellido/documento, representante_firma (`storage/public/firmas-representante/`).
+Metodo `obtenerMembreteParaPDF()`.
+**Rutas:** `GET|PUT /empresa/configuracion`, `DELETE /empresa/logo`.
+
+### 8. Servicios (Ordenes)
+**Controlador:** `ServicioController`
+Al crear:
+1. Seleccionar cliente + examenes (agrupados por categoria)
+2. `numero_orden` automatico: `ORD-YYYYMMDD-XXXX`
+3. `valor_total` = suma de precios
+4. Un `ServicioExamen` por examen seleccionado
+5. `estado_pago`: PENDIENTE/PARCIAL/PAGADO
+
+**`show.blade.php`** es el hub: muestra examenes, asigna profesional, cambia estado, captura resultados, registra pagos, descarga PDFs.
+
+**Rutas:**
+- `resource servicios`
+- `GET /servicios/{id}/orden-pdf`
+- `POST /servicios/{id}/pago`
+- `POST /servicio-examen/{id}/profesional`
+- `POST /servicio-examen/{id}/fecha-toma-muestra`
+- `POST /servicio-examen/{id}/estado`
+
+### 9. Resultados de Examenes
+Ver "Flujo de Captura de Resultados" arriba.
+**Rutas:**
+- `GET /servicio-examen/{id}/resultados/create`
+- `POST /servicio-examen/{id}/resultados`
+- `GET /servicio-examen/{id}/resultados`
+
+### 10. Adjuntos de Resultados
+**Controlador:** `ResultadoAdjuntoController`
+Imagenes asociadas (ECG, radiografias). Max 3 archivos por examen. Formatos: jpg, jpeg, png, gif, webp (max 10MB). Se almacenan en `storage/public/examenes/{numeroOrden}/`.
+**Rutas (JSON):** listar, subir, eliminar, download, download-all (ZIP), reordenar.
+
+### 11. Generacion de PDF
+**Controlador:** `ResultadoPdfController`
+- **Orden de servicio** (`descargarOrden`): examenes solicitados con precios
+- **Resultados** (`generarPdf`/`generarPdfIndividual`): reporte de examenes VALIDADOS con encabezado, datos paciente, parametros, rangos, alertas, textos descriptivos, imagenes, firma digital + fecha validacion, pie de pagina.
+
+**DomPDF:** Papel carta, vertical, fuente Carlito, remote enabled.
+**Archivo:** `Resultado_{documento}_{nombre}_{apellido}.pdf`
+
+**Rutas:**
+- `GET /servicios/{id}/resultados-pdf`
+- `GET /servicios/{id}/examen/{servicioExamenId}/resultados-pdf`
+
+### 12. Perfil de Usuario
+**Controlador:** `PerfilController`
+Edicion de nombre y contrasena. Requiere contrasena actual para cambiar.
+
+---
+
+## Tipos de Resultado - Tabla Resumen
+
+| tipo_resultado | Vista de Captura | tipo_dato Tipico | tipo_referencia Tipico |
+|----------------|------------------|------------------|------------------------|
+| NUMERICO_SIMPLE | tipos/estandar.blade.php | DECIMAL/INTEGER | RANGO |
+| NUMERICO_CATEGORIZADO | tipos/estandar.blade.php | DECIMAL | CATEGORIZADO |
+| CUALITATIVO_SIMPLE | tipos/estandar.blade.php | SELECT | CUALITATIVO |
+| CUALITATIVO_MULTIPLE_OPCIONES | tipos/cualitativo-multiple.blade.php | SELECT + TEXT | CUALITATIVO |
+| MULTIPLE_CALCULADO | tipos/multiple-parametros.blade.php | DECIMAL + calculados | RANGO/CATEGORIZADO |
+| TABLA_HEMATOLOGIA | tipos/multiple-parametros.blade.php | DECIMAL | RANGO (por genero/edad) |
+| TEXTO_DESCRIPTIVO | tipos/texto-descriptivo.blade.php | TEXT (opcional) | INFORMATIVO o ninguno |
+
+**Parciales compartidos:** `tipos/partials/fila-parametro.blade.php`
 
 ---
 
@@ -385,12 +462,12 @@ Evaluacion automatica al guardar resultados. Se ejecuta en `ResultadoExamen::eva
 storage/app/public/
   logos/                  -> Logo de la empresa
   firmas/                 -> Firmas digitales de profesionales
-  firmas-representante/   -> Firma del representante legal de la empresa
+  firmas-representante/   -> Firma del representante legal
   examenes/
     {numeroOrden}/        -> Imagenes adjuntas por orden
 ```
 
-Acceso publico via symlink: `public/storage/ -> storage/app/public/`
+Acceso publico: symlink `public/storage/ -> storage/app/public/` (`php artisan storage:link`).
 
 ---
 
@@ -400,34 +477,30 @@ Acceso publico via symlink: `public/storage/ -> storage/app/public/`
 app/
   Http/
     Controllers/
-      Api/ClienteController.php        # Busqueda AJAX de clientes
-      Auth/LoginController.php          # Autenticacion
-      CategoriaExamenController.php     # CRUD categorias
-      ClienteController.php             # CRUD pacientes
-      EmpresaController.php             # Config laboratorio
-      ExamenController.php              # CRUD examenes
-      ExamenParametroController.php     # CRUD parametros de examen
-      ExamenValorReferenciaController.php # CRUD valores referencia
-      PerfilController.php              # Perfil usuario
-      ProfesionalController.php         # CRUD profesionales
-      ResultadoAdjuntoController.php    # Adjuntos de resultados
-      ResultadoExamenController.php     # Captura y evaluacion de resultados
-      ResultadoPdfController.php        # Generacion PDF
-      ServicioController.php            # Ordenes de laboratorio
-    Requests/                           # 16 form requests de validacion
-  Models/                               # 12 modelos Eloquent
-  Providers/AppServiceProvider.php      # Vacio (sin registros custom)
+      Api/ClienteController.php          # Busqueda AJAX de clientes
+      Auth/LoginController.php           # Autenticacion
+      CategoriaExamenController.php      # CRUD categorias
+      ClienteController.php              # CRUD pacientes
+      EmpresaController.php              # Config laboratorio
+      ExamenController.php               # CRUD examenes + getTiposResultado()
+      ExamenParametroController.php      # CRUD parametros + getTiposDato()
+      ExamenValorReferenciaController.php# CRUD referencia + getTiposReferencia()
+      PerfilController.php               # Perfil usuario
+      ProfesionalController.php          # CRUD profesionales
+      ResultadoAdjuntoController.php     # Adjuntos de resultados
+      ResultadoExamenController.php      # Captura y evaluacion
+      ResultadoPdfController.php         # Generacion PDF
+      ServicioController.php             # Ordenes de laboratorio
+    Requests/                            # 16 form requests
+  Models/                                # 12 modelos Eloquent
 
 resources/views/
-  layouts/app.blade.php                 # Layout principal (Bootstrap 5)
-  layouts/auth.blade.php                # Layout login (glassmorphic)
-  dashboard.blade.php                   # Panel de metricas
-  clientes/                             # index, create, edit, show
-  categorias-examen/                    # index, create, edit, show
-  examenes/                             # index, create, edit, show
-  profesionales/                        # index, create, edit, show
-  servicios/                            # index, create, edit, show, orden-pdf, resultado-pdf
-  resultados/                           # create, show
+  layouts/{app,auth}.blade.php
+  dashboard.blade.php
+  clientes/ categorias-examen/ examenes/ profesionales/
+  servicios/{index,create,edit,show,orden-pdf,resultado-pdf}.blade.php
+  resultados/
+    {create,show}.blade.php
     partials/galeria-adjuntos.blade.php
     tipos/estandar.blade.php
     tipos/cualitativo-multiple.blade.php
@@ -438,28 +511,43 @@ resources/views/
   empresa/edit.blade.php
   perfil/edit.blade.php
 
-routes/web.php                          # Todas las rutas (auth + protected)
-public/js/galeria-adjuntos.js           # JS para galeria de imagenes
+routes/web.php                           # Todas las rutas
+public/js/galeria-adjuntos.js            # JS galeria imagenes
 ```
 
 ---
 
-## Dependencias Principales
+## Dependencias
 
-**PHP (composer.json):**
-- `laravel/framework: ^12.0`
-- `barryvdh/laravel-dompdf: ^3.1`
+**PHP (composer.json):** `laravel/framework: ^12.0`, `barryvdh/laravel-dompdf: ^3.1`
+**JS (package.json):** Bootstrap 5.3, jQuery 3.7, Font Awesome 6.4 (todos CDN en layout). Vite 7 + tailwindcss 4 (solo build - NO usar en Blade).
 
-**JS (package.json):**
-- Bootstrap 5.3 (CDN en layout)
-- jQuery 3.7 (CDN en layout)
-- Font Awesome 6.4 (CDN en layout)
-- Vite 7 + tailwindcss 4 (solo build, NO usar en Blade)
+## Seeders
+
+- `DatabaseSeeder` - Usuario test (test@example.com)
+- `ClienteSeeder` - 50 pacientes + Juan Perez
+- `EmpresaSeeder` - Laboratorio Clinico San Rafael (Bogota)
 
 ---
 
-## Seeders Disponibles
+## Checklist: Crear un Examen Nuevo
 
-- `DatabaseSeeder` - Crea usuario test (test@example.com)
-- `ClienteSeeder` - 50 pacientes de prueba + 1 especifico (Juan Perez)
-- `EmpresaSeeder` - Laboratorio Clinico San Rafael (Bogota)
+1. **Crear categoria** (si no existe) en `/categorias-examen`
+2. **Crear examen** en `/examenes/create`:
+   - Definir `codigo`, `nombre`, `categoria_id`
+   - Elegir **`tipo_resultado`** segun la tabla de arriba (CRITICO)
+   - Completar precios, tiempo_entrega, muestra_requerida, tecnica
+3. **Agregar parametros** desde `/examenes/{id}` (boton "Nuevo Parametro"):
+   - Para cada campo a capturar: `nombre_parametro`, `codigo_parametro` (MAYUSCULAS), `tipo_dato`, `unidad_medida`, `orden`
+   - Si es calculado: marcar `es_calculado` + definir JSON `formula_calculo`
+   - Si es SELECT: definir JSON `opciones_select`
+   - Si aplica: agrupar con `seccion`
+4. **Agregar valores de referencia** desde `/examenes/{id}` (boton "Agregar Valor de Referencia"):
+   - Asociar a `parametro_id` (o dejar null para el examen completo)
+   - Elegir `tipo_referencia` acorde al `tipo_resultado`:
+     - Numericos -> RANGO o CATEGORIZADO
+     - Cualitativos -> CUALITATIVO
+     - Textos descriptivos -> INFORMATIVO (opcional)
+   - Definir contexto si aplica (`genero`, `edad_min`, `edad_max`, `condicion_especial`)
+   - Asignar `orden` de prioridad (menor = mayor prioridad)
+5. **Verificar en orden de prueba**: crear un servicio con un paciente, asignar profesional, capturar un resultado y confirmar que la evaluacion automatica marca correctamente `tipo_alerta` y `rango_referencia`.
