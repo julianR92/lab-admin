@@ -16,6 +16,7 @@ class ServicioExamen extends Model
         'servicio_id',
         'examen_id',
         'es_remitido',
+        'pdf_remision',
         'profesional_id',
         'estado',
         'fecha_toma_muestra',

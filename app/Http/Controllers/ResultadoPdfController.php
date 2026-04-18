@@ -16,6 +16,7 @@ class ResultadoPdfController extends Controller
             'cliente',
             'serviciosExamen' => function ($query) {
                 $query->whereIn('estado', ['VALIDADO', 'ENTREGADO'])
+                    ->where('es_remitido', false)
                     ->with([
                         'examen.categoria',
                         'examen.parametros' => function ($q) {
@@ -92,6 +93,7 @@ class ResultadoPdfController extends Controller
             'serviciosExamen' => function ($query) use ($servicioExamenId) {
                 $query->where('id', $servicioExamenId)
                     ->whereIn('estado', ['VALIDADO', 'ENTREGADO'])
+                    ->where('es_remitido', false)
                     ->with([
                         'examen.categoria',
                         'examen.parametros' => function ($q) {
@@ -152,3 +154,5 @@ class ResultadoPdfController extends Controller
         return $pdf->stream($nombreArchivo);
     }
 }
+
+

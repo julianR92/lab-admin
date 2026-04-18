@@ -44,7 +44,7 @@
 
         .footer {
             position: fixed;
-            bottom: 0;
+            bottom: -60px;
             left: 0;
             width: 100%;
             text-align: right;
@@ -59,7 +59,7 @@
             width: 100%;
             height: 1px;
             background-color: #000;
-            margin-bottom: 2px;
+            margin-bottom: 1px;
         }
 
         /* .contenedor-principal {
@@ -886,7 +886,7 @@
             $font = $fontMetrics->getFont("Carlito");
             $width = $fontMetrics->get_text_width($text, $font, $size) / 2;
             $x = ($pdf->get_width() - $width) / 2;
-            $y = $pdf->get_height() - 28;
+            $y = $pdf->get_height() - 18;
             $pdf->page_text($x, $y, $text, $font, $size, array(0.4, 0.4, 0.4));
         }
     </script>

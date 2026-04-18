@@ -83,6 +83,11 @@ Route::middleware('auth')->group(function () {
     Route::get('servicio-examen/{servicioExamen}/adjuntos/download-all', [\App\Http\Controllers\ResultadoAdjuntoController::class, 'downloadAll'])->name('adjuntos.download-all');
     Route::post('servicio-examen/{servicioExamen}/adjuntos/orden', [\App\Http\Controllers\ResultadoAdjuntoController::class, 'updateOrden'])->name('adjuntos.orden');
 
+    // Rutas de PDF de Remisión
+    Route::post('servicio-examen/{servicioExamen}/pdf-remision', [\App\Http\Controllers\RemisionPdfController::class, 'store'])->name('remision.store');
+    Route::delete('servicio-examen/{servicioExamen}/pdf-remision', [\App\Http\Controllers\RemisionPdfController::class, 'destroy'])->name('remision.destroy');
+    Route::get('servicio-examen/{servicioExamen}/pdf-remision/download', [\App\Http\Controllers\RemisionPdfController::class, 'download'])->name('remision.download');
+
     // Rutas de Perfil
     Route::get('/perfil', [\App\Http\Controllers\PerfilController::class, 'edit'])->name('perfil.edit');
     Route::put('/perfil', [\App\Http\Controllers\PerfilController::class, 'update'])->name('perfil.update');

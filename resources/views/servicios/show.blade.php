@@ -254,48 +254,99 @@
                                 <td>{{ $servicioExamen->fecha_resultado ? $servicioExamen->fecha_resultado->format('d/m/Y H:i') : '-' }}</td>
                                 <td>
                                     <div class="btn-group btn-group-sm">
-                                        @if (in_array($servicioExamen->estado, ['PENDIENTE', 'EN_PROCESO']))
-                                            <a href="{{ route('resultados.create', $servicioExamen) }}" class="btn btn-primary" title="Capturar Resultados">
-                                                <i class="fas fa-edit"></i>
-                                            </a>
-                                        @endif
+                                        @if ($servicioExamen->es_remitido)
+                                            {{-- Examen remitido: sin captura ni validación --}}
+                                            @if ($servicioExamen->estado !== 'ENTREGADO')
+                                                @if ($servicioExamen->pdf_remision)
+                                                    <a href="{{ route('remision.download', $servicioExamen) }}"
+                                                       class="btn btn-danger" title="Descargar PDF remisión" target="_blank">
+                                                        <i class="fas fa-file-pdf"></i>
+                                                    </a>
+                                                    <form method="POST" action="{{ route('remision.destroy', $servicioExamen) }}"
+                                                          class="d-inline" onsubmit="return confirm('¿Eliminar el PDF de remisión?')">
+                                                        @csrf
+                                                        @method('DELETE')
+                                                        <button type="submit" class="btn btn-outline-danger" title="Eliminar PDF remisión">
+                                                            <i class="fas fa-trash"></i>
+                                                        </button>
+                                                    </form>
+                                                @else
+                                                    <form method="POST" action="{{ route('remision.store', $servicioExamen) }}"
+                                                          enctype="multipart/form-data" class="d-inline">
+                                                        @csrf
+                                                        <div class="input-group input-group-sm">
+                                                            <input type="file" name="archivo"
+                                                                   class="form-control form-control-sm"
+                                                                   accept="application/pdf" required>
+                                                            <button type="submit" class="btn btn-outline-primary" title="Subir PDF remisión">
+                                                                <i class="fas fa-upload"></i>
+                                                            </button>
+                                                        </div>
+                                                    </form>
+                                                @endif
+                                                <form method="POST" action="{{ route('servicios.cambiar-estado', $servicioExamen) }}"
+                                                      class="d-inline ms-1">
+                                                    @csrf
+                                                    <input type="hidden" name="estado" value="ENTREGADO">
+                                                    <button type="submit" class="btn btn-dark" title="Marcar Entregado"
+                                                            onclick="return confirm('¿Marcar este examen como entregado?')">
+                                                        <i class="fas fa-check-double"></i>
+                                                    </button>
+                                                </form>
+                                            @else
+                                                {{-- Entregado: solo descarga si tiene PDF --}}
+                                                @if ($servicioExamen->pdf_remision)
+                                                    <a href="{{ route('remision.download', $servicioExamen) }}"
+                                                       class="btn btn-danger" title="Descargar PDF remisión" target="_blank">
+                                                        <i class="fas fa-file-pdf"></i>
+                                                    </a>
+                                                @endif
+                                            @endif
+                                        @else
+                                            {{-- Examen normal: flujo completo --}}
+                                            @if (in_array($servicioExamen->estado, ['PENDIENTE', 'EN_PROCESO']))
+                                                <a href="{{ route('resultados.create', $servicioExamen) }}" class="btn btn-primary" title="Capturar Resultados">
+                                                    <i class="fas fa-edit"></i>
+                                                </a>
+                                            @endif
 
-                                        @if ($servicioExamen->estado == 'COMPLETADO')
-                                            <a href="{{ route('resultados.create', $servicioExamen) }}" class="btn btn-warning" title="Editar Resultados">
-                                                <i class="fas fa-edit"></i>
-                                            </a>
-                                            <form method="POST" action="{{ route('servicios.cambiar-estado', $servicioExamen) }}" class="d-inline">
-                                                @csrf
-                                                <input type="hidden" name="estado" value="VALIDADO">
-                                                <button type="submit" class="btn btn-success" title="Validar">
-                                                    <i class="fas fa-check"></i>
-                                                </button>
-                                            </form>
-                                        @endif
+                                            @if ($servicioExamen->estado == 'COMPLETADO')
+                                                <a href="{{ route('resultados.create', $servicioExamen) }}" class="btn btn-warning" title="Editar Resultados">
+                                                    <i class="fas fa-edit"></i>
+                                                </a>
+                                                <form method="POST" action="{{ route('servicios.cambiar-estado', $servicioExamen) }}" class="d-inline">
+                                                    @csrf
+                                                    <input type="hidden" name="estado" value="VALIDADO">
+                                                    <button type="submit" class="btn btn-success" title="Validar">
+                                                        <i class="fas fa-check"></i>
+                                                    </button>
+                                                </form>
+                                            @endif
 
-                                        @if ($servicioExamen->estado == 'VALIDADO')
-                                            <a href="{{ route('servicios.examen.resultados-pdf', [$servicio, $servicioExamen]) }}" class="btn btn-danger" title="Imprimir PDF" target="_blank">
-                                                <i class="fas fa-file-pdf"></i>
-                                            </a>
-                                            <a href="{{ route('resultados.show', $servicioExamen) }}" class="btn btn-info" title="Ver Resultados">
-                                                <i class="fas fa-eye"></i>
-                                            </a>
-                                            <form method="POST" action="{{ route('servicios.cambiar-estado', $servicioExamen) }}" class="d-inline">
-                                                @csrf
-                                                <input type="hidden" name="estado" value="ENTREGADO">
-                                                <button type="submit" class="btn btn-dark" title="Marcar Entregado">
-                                                    <i class="fas fa-check-double"></i>
-                                                </button>
-                                            </form>
-                                        @endif
+                                            @if ($servicioExamen->estado == 'VALIDADO')
+                                                <a href="{{ route('servicios.examen.resultados-pdf', [$servicio, $servicioExamen]) }}" class="btn btn-danger" title="Imprimir PDF" target="_blank">
+                                                    <i class="fas fa-file-pdf"></i>
+                                                </a>
+                                                <a href="{{ route('resultados.show', $servicioExamen) }}" class="btn btn-info" title="Ver Resultados">
+                                                    <i class="fas fa-eye"></i>
+                                                </a>
+                                                <form method="POST" action="{{ route('servicios.cambiar-estado', $servicioExamen) }}" class="d-inline">
+                                                    @csrf
+                                                    <input type="hidden" name="estado" value="ENTREGADO">
+                                                    <button type="submit" class="btn btn-dark" title="Marcar Entregado">
+                                                        <i class="fas fa-check-double"></i>
+                                                    </button>
+                                                </form>
+                                            @endif
 
-                                        @if ($servicioExamen->estado == 'ENTREGADO')
-                                            <a href="{{ route('servicios.examen.resultados-pdf', [$servicio, $servicioExamen]) }}" class="btn btn-danger" title="Imprimir PDF" target="_blank">
-                                                <i class="fas fa-file-pdf"></i>
-                                            </a>
-                                            <a href="{{ route('resultados.show', $servicioExamen) }}" class="btn btn-info" title="Ver Resultados">
-                                                <i class="fas fa-eye"></i>
-                                            </a>
+                                            @if ($servicioExamen->estado == 'ENTREGADO')
+                                                <a href="{{ route('servicios.examen.resultados-pdf', [$servicio, $servicioExamen]) }}" class="btn btn-danger" title="Imprimir PDF" target="_blank">
+                                                    <i class="fas fa-file-pdf"></i>
+                                                </a>
+                                                <a href="{{ route('resultados.show', $servicioExamen) }}" class="btn btn-info" title="Ver Resultados">
+                                                    <i class="fas fa-eye"></i>
+                                                </a>
+                                            @endif
                                         @endif
                                     </div>
                                 </td>

@@ -329,8 +329,12 @@ class ServicioController extends Controller
         $estadoAnterior = $servicioExamen->estado;
         $nuevoEstado = $request->estado;
 
-        // Validar transición de estado
-        if (! $this->esTransicionValida($estadoAnterior, $nuevoEstado)) {
+        // Para exámenes remitidos, PENDIENTE → ENTREGADO es una transición válida directa
+        if ($servicioExamen->es_remitido && $nuevoEstado === 'ENTREGADO') {
+            if ($estadoAnterior === 'ENTREGADO') {
+                return back()->with('error', 'El examen ya fue entregado.');
+            }
+        } elseif (! $this->esTransicionValida($estadoAnterior, $nuevoEstado)) {
             return back()->with('error', 'Transición de estado no válida.');
         }
 
