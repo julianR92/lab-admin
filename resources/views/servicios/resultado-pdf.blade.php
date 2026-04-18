@@ -21,7 +21,7 @@
         }
 
         @page {
-            margin: 20px 20px 20px 15px;
+            margin: 20px 20px 60px 15px;
         }
         body {
             font-family: 'Carlito', sans-serif;
@@ -208,6 +208,11 @@
 
         .tabla-resultados thead {
             /* background-color: #e0e0e0; */
+            display: table-header-group;
+        }
+
+        .tabla-resultados tbody tr {
+            page-break-inside: avoid;
         }
 
         .tabla-resultados th {
@@ -329,6 +334,10 @@
             border: none;
         }
 
+        .tabla-cualitativa tr {
+            page-break-inside: avoid;
+        }
+
         .tabla-cualitativa .parametro-nombre {
             font-weight: normal;
             color: #1a1a1a;
@@ -404,8 +413,8 @@
         }
 
         .firma-imagen img {
-            max-width: 160px;
-            max-height: 58px;
+            max-width: 150px;
+            max-height: 40px;
         }
 
         .firma-linea {
@@ -418,7 +427,7 @@
         .firma-datos {
             font-size: 8pt;
             text-align: right;
-            line-height: 1.3;
+            line-height: 0.9;
             color: #1a1a1a;
         }
 
@@ -436,6 +445,7 @@
         /* ============ FIRMA REPRESENTANTE LEGAL ============ */
         .firma-representante-section {
             margin-top: 30px;
+            margin-bottom: 20px;
             page-break-inside: avoid;
             text-align: center;
         }
@@ -839,9 +849,9 @@
     @endforeach
 
     <!-- ============ NOTA FINAL ============ -->
-    <div class="nota-final">
+    {{-- <div class="nota-final">
         <em>Nota: Se sugiere correlacionar con historial médico y sintomatología clínica</em>
-    </div>
+    </div> --}}
 
     <!-- ============ FIRMA REPRESENTANTE LEGAL ============ -->
     @if($empresa && $empresa->representante_firma)

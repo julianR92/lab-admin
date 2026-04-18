@@ -20,7 +20,7 @@
             <a href="{{ route('servicios.descargar-orden', $servicio) }}" class="btn btn-success me-2" target="_blank">
                 <i class="fas fa-file-pdf me-2"></i>Descargar Orden
             </a>
-            @if($servicio->serviciosExamen->where('estado', 'VALIDADO')->count() > 0)
+           @if($servicio->serviciosExamen->whereIn('estado', ['VALIDADO', 'ENTREGADO'])->count() > 0)
             <a href="{{ route('servicios.resultados-pdf', $servicio) }}" class="btn btn-info me-2" target="_blank" title="Descargar resultados validados">
                 <i class="fas fa-file-medical-alt me-2"></i>Resultados PDF
             </a>
