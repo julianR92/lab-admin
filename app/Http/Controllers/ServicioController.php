@@ -88,6 +88,7 @@ class ServicioController extends Controller
                 'valor_total' => $valorTotal,
                 'valor_pagado' => $valorPagado,
                 'medio_pago' => $request->medio_pago,
+                'canal_difusion' => $request->canal_difusion,
                 'estado_pago' => $estadoPago,
                 'observaciones' => $request->observaciones,
             ]);
@@ -97,6 +98,7 @@ class ServicioController extends Controller
                 ServicioExamen::create([
                     'servicio_id' => $servicio->id,
                     'examen_id' => $examenId,
+                    'es_remitido' => (bool) ($request->remitidos[$index] ?? false),
                     'estado' => 'PENDIENTE',
                 ]);
             }
@@ -201,6 +203,10 @@ class ServicioController extends Controller
 
             if ($request->filled('medio_pago')) {
                 $servicio->medio_pago = $request->medio_pago;
+            }
+
+            if ($request->has('canal_difusion')) {
+                $servicio->canal_difusion = $request->canal_difusion ?: null;
             }
 
             if ($request->has('observaciones')) {

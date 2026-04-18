@@ -15,6 +15,7 @@ class ServicioExamen extends Model
     protected $fillable = [
         'servicio_id',
         'examen_id',
+        'es_remitido',
         'profesional_id',
         'estado',
         'fecha_toma_muestra',
@@ -27,6 +28,7 @@ class ServicioExamen extends Model
     protected function casts(): array
     {
         return [
+            'es_remitido' => 'boolean',
             'fecha_toma_muestra' => 'datetime',
             'fecha_resultado' => 'datetime',
             'fecha_validacion' => 'datetime',

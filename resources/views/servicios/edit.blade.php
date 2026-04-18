@@ -107,6 +107,20 @@
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
                         </div>
+
+                        <div class="mb-3">
+                            <label for="canal_difusion" class="form-label">Canal de Difusión</label>
+                            <select class="form-select @error('canal_difusion') is-invalid @enderror" id="canal_difusion" name="canal_difusion">
+                                <option value="">-- Seleccione --</option>
+                                <option value="BARRIOS" {{ old('canal_difusion', $servicio->canal_difusion) == 'BARRIOS' ? 'selected' : '' }}>Barrios</option>
+                                <option value="FAMILIAR" {{ old('canal_difusion', $servicio->canal_difusion) == 'FAMILIAR' ? 'selected' : '' }}>Familiar</option>
+                                <option value="REDES" {{ old('canal_difusion', $servicio->canal_difusion) == 'REDES' ? 'selected' : '' }}>Redes</option>
+                                <option value="MESA" {{ old('canal_difusion', $servicio->canal_difusion) == 'MESA' ? 'selected' : '' }}>Mesa</option>
+                            </select>
+                            @error('canal_difusion')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
                     </div>
                 </div>
 

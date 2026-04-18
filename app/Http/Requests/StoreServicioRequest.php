@@ -18,7 +18,10 @@ class StoreServicioRequest extends FormRequest
             'fecha' => ['required', 'date'],
             'valor_pagado' => ['nullable', 'numeric', 'min:0'],
             'medio_pago' => ['nullable', 'in:Efectivo,Tarjeta débito,Tarjeta crédito,Transferencia,Nequi,Daviplata'],
+            'canal_difusion' => ['nullable', 'in:BARRIOS,FAMILIAR,REDES,MESA'],
             'observaciones' => ['nullable', 'string', 'max:1000'],
+            'remitidos' => ['nullable', 'array'],
+            'remitidos.*' => ['boolean'],
             'examenes' => ['required', 'array', 'min:1'],
             'examenes.*' => ['required', 'exists:examen,id'],
             'precios' => ['required', 'array', 'min:1'],
@@ -36,6 +39,7 @@ class StoreServicioRequest extends FormRequest
             'valor_pagado.numeric' => 'El valor pagado debe ser un número.',
             'valor_pagado.min' => 'El valor pagado no puede ser negativo.',
             'medio_pago.in' => 'El medio de pago seleccionado no es válido.',
+            'canal_difusion.in' => 'El canal de difusión seleccionado no es válido.',
             'observaciones.max' => 'Las observaciones no pueden tener más de 1000 caracteres.',
             'examenes.required' => 'Debe agregar al menos un examen.',
             'examenes.array' => 'Los exámenes deben ser un arreglo.',
@@ -60,6 +64,12 @@ class StoreServicioRequest extends FormRequest
         if ($this->has('precios') && is_string($this->precios)) {
             $this->merge([
                 'precios' => json_decode($this->precios, true) ?? [],
+            ]);
+        }
+
+        if ($this->has('remitidos') && is_string($this->remitidos)) {
+            $this->merge([
+                'remitidos' => json_decode($this->remitidos, true) ?? [],
             ]);
         }
     }

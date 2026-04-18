@@ -136,6 +136,10 @@
                             <td>{{ $servicio->medio_pago ?? 'No especificado' }}</td>
                         </tr>
                         <tr>
+                            <th>Canal de Difusión:</th>
+                            <td>{{ $servicio->canal_difusion ?? 'No especificado' }}</td>
+                        </tr>
+                        <tr>
                             <th>Estado Pago:</th>
                             <td>
                                 @if ($servicio->estado_pago == 'PENDIENTE')
@@ -183,7 +187,12 @@
                         @foreach ($servicio->serviciosExamen as $servicioExamen)
                             <tr>
                                 <td><strong>{{ $servicioExamen->examen->codigo }}</strong></td>
-                                <td>{{ $servicioExamen->examen->nombre }}</td>
+                                <td>
+                                    {{ $servicioExamen->examen->nombre }}
+                                    @if ($servicioExamen->es_remitido)
+                                        <span class="badge bg-warning text-dark ms-1">Remitido</span>
+                                    @endif
+                                </td>
                                 <td>
                                     <span class="badge bg-secondary">{{ $servicioExamen->examen->categoria->categoria }}</span>
                                 </td>

@@ -90,7 +90,7 @@
                                 @foreach ($examenes as $categoria => $examenesCategoria)
                                     <optgroup label="{{ $categoria }}">
                                         @foreach ($examenesCategoria as $examen)
-                                            <option value="{{ $examen->id }}" data-precio="{{ $examen->valor_total }}" data-nombre="{{ $examen->codigo }} - {{ $examen->nombre }}">
+                                            <option value="{{ $examen->id }}" data-precio="{{ $examen->valor_total }}" data-precio-remision="{{ $examen->valor_remision ?? 0 }}" data-nombre="{{ $examen->codigo }} - {{ $examen->nombre }}">
                                                 {{ $examen->codigo }} - {{ $examen->nombre }} ({{ number_format($examen->valor_total, 0, ',', '.') }})
                                             </option>
                                         @endforeach
@@ -103,21 +103,22 @@
                             <table class="table table-bordered">
                                 <thead class="table-light">
                                     <tr>
-                                        <th width="40%">Examen</th>
-                                        <th width="20%">Precio Unitario</th>
-                                        <th width="15%">Cantidad</th>
-                                        <th width="15%">Subtotal</th>
+                                        <th width="35%">Examen</th>
+                                        <th width="18%">Precio Unitario</th>
+                                        <th width="12%">Cantidad</th>
+                                        <th width="12%">Subtotal</th>
+                                        <th width="13%">Remitido</th>
                                         <th width="10%">Acción</th>
                                     </tr>
                                 </thead>
                                 <tbody id="examenesTable">
                                     <tr id="emptyRow">
-                                        <td colspan="5" class="text-center text-muted">No se han agregado exámenes</td>
+                                        <td colspan="6" class="text-center text-muted">No se han agregado exámenes</td>
                                     </tr>
                                 </tbody>
                                 <tfoot>
                                     <tr class="table-info">
-                                        <td colspan="3" class="text-end"><strong>TOTAL:</strong></td>
+                                        <td colspan="4" class="text-end"><strong>TOTAL:</strong></td>
                                         <td><strong>$<span id="totalGeneral">0</span></strong></td>
                                         <td></td>
                                     </tr>
@@ -127,6 +128,7 @@
 
                         <input type="hidden" name="examenes" id="examenes" required>
                         <input type="hidden" name="precios" id="precios" required>
+                        <input type="hidden" name="remitidos" id="remitidos">
                     </div>
                 </div>
             </div>
@@ -190,6 +192,20 @@
                         </div>
 
                         <div class="mb-3">
+                            <label for="canal_difusion" class="form-label">Canal de Difusión</label>
+                            <select class="form-select @error('canal_difusion') is-invalid @enderror" id="canal_difusion" name="canal_difusion">
+                                <option value="">-- Seleccione --</option>
+                                <option value="BARRIOS" {{ old('canal_difusion') == 'BARRIOS' ? 'selected' : '' }}>Barrios</option>
+                                <option value="FAMILIAR" {{ old('canal_difusion') == 'FAMILIAR' ? 'selected' : '' }}>Familiar</option>
+                                <option value="REDES" {{ old('canal_difusion') == 'REDES' ? 'selected' : '' }}>Redes</option>
+                                <option value="MESA" {{ old('canal_difusion') == 'MESA' ? 'selected' : '' }}>Mesa</option>
+                            </select>
+                            @error('canal_difusion')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+
+                        <div class="mb-3">
                             <label for="observaciones" class="form-label">Observaciones</label>
                             <textarea class="form-control @error('observaciones') is-invalid @enderror"
                                       id="observaciones" name="observaciones" rows="3">{{ old('observaciones') }}</textarea>
@@ -230,6 +246,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let examenesAgregados = [];
     let preciosExamenes = [];
     let cantidadesExamenes = [];
+    let remitidosExamenes = [];
     let timeoutId = null;
 
     // Búsqueda de cliente con autocompletado
@@ -317,10 +334,14 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
+        const examenPrecioRemision = parseFloat(selectedOption.dataset.precioRemision) || 0;
+        const currentIndex = examenesAgregados.length;
+
         // Agregar a los arrays
         examenesAgregados.push(examenId);
         preciosExamenes.push(examenPrecio);
         cantidadesExamenes.push(1);
+        remitidosExamenes.push(false);
 
         // Ocultar fila vacía
         emptyRow.style.display = 'none';
@@ -328,15 +349,25 @@ document.addEventListener('DOMContentLoaded', function() {
         // Agregar fila
         const row = document.createElement('tr');
         row.dataset.examenId = examenId;
+        const labelRemision = examenPrecioRemision > 0
+            ? `<br><small class="text-muted">Remisión: $${formatNumber(examenPrecioRemision)}</small>`
+            : '<br><small class="text-muted">Sin precio de remisión</small>';
         row.innerHTML = `
             <td>${examenNombre}</td>
             <td>$${formatNumber(examenPrecio)}</td>
             <td>
                 <input type="number" class="form-control form-control-sm cantidad-input"
-                       value="1" min="1" max="99" data-index="${examenesAgregados.length - 1}">
+                       value="1" min="1" max="99" data-index="${currentIndex}">
             </td>
             <td class="text-end">
                 <strong>$<span class="subtotal">${formatNumber(examenPrecio)}</span></strong>
+            </td>
+            <td class="text-center">
+                <div class="form-check justify-content-center d-flex">
+                    <input class="form-check-input remitido-check" type="checkbox"
+                           data-index="${currentIndex}">
+                </div>
+                ${labelRemision}
             </td>
             <td class="text-center">
                 <button type="button" class="btn btn-danger btn-sm eliminar-examen" data-examen-id="${examenId}">
@@ -366,6 +397,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 examenesAgregados.splice(index, 1);
                 preciosExamenes.splice(index, 1);
                 cantidadesExamenes.splice(index, 1);
+                remitidosExamenes.splice(index, 1);
             }
 
             row.remove();
@@ -375,6 +407,15 @@ document.addEventListener('DOMContentLoaded', function() {
             }
 
             actualizarTotal();
+            actualizarInputsHidden();
+        }
+    });
+
+    // Toggle remitido
+    examenesTable.addEventListener('change', function(e) {
+        if (e.target.classList.contains('remitido-check')) {
+            const index = parseInt(e.target.dataset.index);
+            remitidosExamenes[index] = e.target.checked;
             actualizarInputsHidden();
         }
     });
@@ -415,9 +456,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function actualizarInputsHidden() {
         document.getElementById('examenes').value = JSON.stringify(examenesAgregados);
-        // Guardar los subtotales (precio * cantidad) en el array de precios
         const subtotales = preciosExamenes.map((precio, index) => precio * (cantidadesExamenes[index] || 1));
         document.getElementById('precios').value = JSON.stringify(subtotales);
+        document.getElementById('remitidos').value = JSON.stringify(remitidosExamenes);
     }
 
     function formatNumber(num) {

@@ -18,6 +18,7 @@ class Servicio extends Model
         'valor_total',
         'valor_pagado',
         'medio_pago',
+        'canal_difusion',
         'estado_pago',
         'observaciones',
     ];
