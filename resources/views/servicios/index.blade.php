@@ -38,27 +38,52 @@
     <div class="card border-0 shadow-sm mb-4">
         <div class="card-body">
             <form method="GET" action="{{ route('servicios.index') }}" class="row g-3">
-                <div class="col-md-3">
+                {{-- Fila 1: fechas + documento + nombre --}}
+                <div class="col-md-2">
                     <label for="fecha_desde" class="form-label">Fecha Desde</label>
                     <input type="date" class="form-control" id="fecha_desde" name="fecha_desde" value="{{ request('fecha_desde') }}">
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <label for="fecha_hasta" class="form-label">Fecha Hasta</label>
                     <input type="date" class="form-control" id="fecha_hasta" name="fecha_hasta" value="{{ request('fecha_hasta') }}">
                 </div>
-                <div class="col-md-3">
-                    <label for="estado_pago" class="form-label">Estado Pago</label>
-                    <select class="form-select" id="estado_pago" name="estado_pago">
-                        <option value="">Todos</option>
-                        <option value="PENDIENTE" {{ request('estado_pago') == 'PENDIENTE' ? 'selected' : '' }}>Pendiente</option>
-                        <option value="PARCIAL" {{ request('estado_pago') == 'PARCIAL' ? 'selected' : '' }}>Parcial</option>
-                        <option value="PAGADO" {{ request('estado_pago') == 'PAGADO' ? 'selected' : '' }}>Pagado</option>
+                <div class="col-md-2">
+                    <label for="documento" class="form-label">N° Documento Paciente</label>
+                    <input type="text" class="form-control" id="documento" name="documento"
+                           placeholder="Buscar por CC, TI..." value="{{ request('documento') }}">
+                </div>
+                <div class="col-md-2">
+                    <label for="buscar" class="form-label">Nombre / Apellido</label>
+                    <input type="text" class="form-control" id="buscar" name="buscar"
+                           placeholder="Buscar por nombre..." value="{{ request('buscar') }}">
+                </div>
+                 <div class="col-md-4">
+                    <label for="estado_examen" class="form-label">Estado del Examen</label>
+                    <select name="estado_examen" id="estado_examen" class="form-select">
+                        <option value="">Todos los estados</option>
+                        @foreach ($estadosExamen as $valor => $etiqueta)
+                            <option value="{{ $valor }}" {{ request('estado_examen') === $valor ? 'selected' : '' }}>
+                                {{ $etiqueta }}
+                            </option>
+                        @endforeach
                     </select>
                 </div>
-                <div class="col-md-3">
-                    <label for="buscar" class="form-label">Buscar</label>
-                    <input type="text" class="form-control" id="buscar" name="buscar" placeholder="Cliente u orden..." value="{{ request('buscar') }}">
+
+                {{-- Fila 2: exámenes (select2 múltiple) + estado examen --}}
+                <div class="col-md-8">
+                    <label for="examenes_filtro" class="form-label">Exámenes</label>
+                    <select name="examenes[]" id="examenes_filtro" class="form-select" multiple>
+                        @foreach ($examenesDisponibles as $examen)
+                            <option value="{{ $examen->id }}"
+                                {{ in_array($examen->id, request('examenes', [])) ? 'selected' : '' }}>
+                                {{ $examen->codigo }} — {{ $examen->nombre }}
+                            </option>
+                        @endforeach
+                    </select>
                 </div>
+
+
+                {{-- Fila 3: botones --}}
                 <div class="col-12">
                     <button type="submit" class="btn btn-primary">
                         <i class="fas fa-search me-2"></i>Filtrar
@@ -74,7 +99,7 @@
     <div class="card border-0 shadow-sm">
         <div class="card-body">
             <div class="table-responsive">
-                <table class="table table-hover">
+                <table id="serviciosTable" class="table table-hover">
                     <thead>
                         <tr>
                             <th>Número Orden</th>
@@ -87,61 +112,7 @@
                             <th>Acciones</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        @forelse ($servicios as $servicio)
-                            <tr>
-                                <td>
-                                    <a href="{{ route('servicios.show', $servicio) }}" class="text-decoration-none fw-bold">
-                                        {{ $servicio->numero_orden }}
-                                    </a>
-                                </td>
-                                <td>{{ $servicio->fecha->format('d/m/Y') }}</td>
-                                <td>{{ $servicio->cliente->nombre_completo }}</td>
-                                <td>{{ $servicio->cliente->documento }}</td>
-                                <td>
-                                    <span class="badge bg-info">{{ $servicio->serviciosExamen->count() }}</span>
-                                </td>
-                                <td>${{ number_format($servicio->valor_total, 0, ',', '.') }}</td>
-                                <td>
-                                    @if ($servicio->estado_pago == 'PENDIENTE')
-                                        <span class="badge bg-warning text-dark">Pendiente</span>
-                                    @elseif ($servicio->estado_pago == 'PARCIAL')
-                                        <span class="badge bg-info">Parcial</span>
-                                    @else
-                                        <span class="badge bg-success">Pagado</span>
-                                    @endif
-                                </td>
-                                <td>
-                                    <div class="btn-group btn-group-sm">
-                                        <a href="{{ route('servicios.show', $servicio) }}" class="btn btn-info" title="Ver">
-                                            <i class="fas fa-eye"></i>
-                                        </a>
-                                        <a href="{{ route('servicios.descargar-orden', $servicio) }}" class="btn btn-success" title="Descargar Orden" target="_blank">
-                                            <i class="fas fa-file-pdf"></i>
-                                        </a>
-                                        <a href="{{ route('servicios.edit', $servicio) }}" class="btn btn-primary" title="Editar">
-                                            <i class="fas fa-edit"></i>
-                                        </a>
-                                        <button type="button" class="btn btn-danger" onclick="confirmDelete({{ $servicio->id }})" title="Eliminar">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="8" class="text-center py-4">
-                                    <i class="fas fa-inbox fa-3x text-muted mb-3 d-block"></i>
-                                    <p class="text-muted">No hay servicios registrados</p>
-                                </td>
-                            </tr>
-                        @endforelse
-                    </tbody>
                 </table>
-            </div>
-
-            <div class="mt-3">
-                {{ $servicios->links() }}
             </div>
         </div>
     </div>
@@ -172,8 +143,98 @@
 </div>
 @endsection
 
+@push('styles')
+<link href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet">
+<style>
+    .table th {
+        background-color: #f8f9fa;
+        font-weight: 600;
+        font-size: 14px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #495057;
+    }
+    .table td { vertical-align: middle; font-size: 14px; }
+    .dataTables_wrapper .dataTables_filter input {
+        border-radius: 8px;
+        border: 2px solid #e9ecef;
+        padding: 8px 16px;
+    }
+    .dataTables_wrapper .dataTables_length select {
+        border-radius: 8px;
+        border: 2px solid #e9ecef;
+        padding: 6px 12px;
+    }
+</style>
+@endpush
+
 @push('scripts')
+<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script>
+$(document).ready(function () {
+    $('#examenes_filtro').select2({
+        theme: 'bootstrap-5',
+        placeholder: 'Seleccione uno o más exámenes...',
+        allowClear: true,
+        language: {
+            noResults: function () { return 'No se encontraron exámenes'; },
+            searching: function () { return 'Buscando...'; },
+        },
+    });
+
+    $('#serviciosTable').DataTable({
+        processing: true,
+        serverSide: false,
+        ajax: {
+            url: '{{ route('servicios.index') }}' + window.location.search,
+            type: 'GET',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        },
+        columns: [
+            {
+                data: 'numero_orden',
+                render: function (data, type, row) {
+                    return '<a href="/servicios/' + row.acciones + '" class="text-decoration-none fw-bold">' + data + '</a>';
+                }
+            },
+            { data: 'fecha' },
+            { data: 'cliente_nombre' },
+            { data: 'documento' },
+            {
+                data: 'total_examenes',
+                render: function (data) {
+                    return '<span class="badge bg-info">' + data + '</span>';
+                }
+            },
+            { data: 'valor_total' },
+            { data: 'estado_pago', orderable: false },
+            {
+                data: 'acciones',
+                orderable: false,
+                searchable: false,
+                render: function (data) {
+                    return `
+                        <div class="btn-group btn-group-sm">
+                            <a href="/servicios/${data}" class="btn btn-info" title="Ver"><i class="fas fa-eye"></i></a>
+                            <a href="/servicios/${data}/orden-pdf" class="btn btn-success" title="Descargar Orden" target="_blank"><i class="fas fa-file-pdf"></i></a>
+                            <a href="/servicios/${data}/edit" class="btn btn-primary" title="Editar"><i class="fas fa-edit"></i></a>
+                            <button class="btn btn-danger" onclick="confirmDelete(${data})" title="Eliminar"><i class="fas fa-trash"></i></button>
+                        </div>`;
+                }
+            },
+        ],
+        language: {
+            url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/es-ES.json'
+        },
+        order: [[1, 'desc']],
+        pageLength: 25,
+    });
+});
+
 function confirmDelete(id) {
     const form = document.getElementById('deleteForm');
     form.action = `/servicios/${id}`;

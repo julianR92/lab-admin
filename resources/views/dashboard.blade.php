@@ -111,7 +111,7 @@
                             </div>
                         </div>
                         <h6 class="mb-1 fw-bold">Nueva Orden</h6>
-                        <p class="small mb-0 opacity-75">Crear nueva orden de servicio</p>
+                        <p class="text-muted small mb-0">Crear nueva orden de servicio</p>
                     </div>
                 </div>
             </a>

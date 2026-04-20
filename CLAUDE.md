@@ -78,7 +78,7 @@ User (autenticacion y auditoria)
 | ExamenParametro | examen_parametros | Campos a capturar por examen (tipo_dato, formula, opciones) |
 | ExamenValorReferencia | examen_valores_referencia | Rangos/valores de referencia contextuales |
 | Servicio | servicio | Ordenes de laboratorio con pago |
-| ServicioExamen | servicio_examen | Examenes dentro de una orden con estado |
+| ServicioExamen | servicio_examen | Examenes dentro de una orden con estado. Campos clave: `es_remitido` (boolean), `pdf_remision` (varchar, ruta al PDF externo) |
 | ResultadoExamen | resultados_examen | Valores capturados + evaluacion automatica |
 | ResultadoAdjunto | resultado_adjuntos | Imagenes adjuntas a resultados |
 
@@ -335,6 +335,20 @@ Transiciones en `ServicioController@cambiarEstado`. Cada cambio actualiza timest
 
 **`fecha_toma_muestra`:** Se asigna a `now()` al transicionar a EN_PROCESO (solo si es null). Editable manualmente desde `show.blade.php` via `ServicioController@actualizarFechaTomaMuestra` mientras el estado sea PENDIENTE/EN_PROCESO/COMPLETADO (`puedeEditarse()=true`). Request: `ActualizarFechaTomaMuestraRequest`.
 
+### Examenes Remitidos (`es_remitido = true`)
+
+Cuando `ServicioExamen.es_remitido = true`, el examen fue enviado a un laboratorio externo. El flujo es diferente:
+- **No aparecen** botones de captura ni validacion en `show.blade.php`
+- La transicion directa **PENDIENTE → ENTREGADO** esta permitida (se omite la validacion normal de estados)
+- Opcionalmente se puede subir el PDF del laboratorio externo (`pdf_remision`)
+- El boton "Resultados PDF" del encabezado **no aparece** si todos los examenes VALIDADOS/ENTREGADOS son remitidos
+- `ResultadoPdfController` excluye examenes remitidos de la generacion DomPDF
+
+**SQL para agregar la columna (no usar migraciones en este proyecto):**
+```sql
+ALTER TABLE servicio_examen ADD COLUMN pdf_remision VARCHAR(500) NULL AFTER es_remitido;
+```
+
 ---
 
 ## Sistema de Alertas
@@ -422,10 +436,25 @@ Ver "Flujo de Captura de Resultados" arriba.
 Imagenes asociadas (ECG, radiografias). Max 3 archivos por examen. Formatos: jpg, jpeg, png, gif, webp (max 10MB). Se almacenan en `storage/public/examenes/{numeroOrden}/`.
 **Rutas (JSON):** listar, subir, eliminar, download, download-all (ZIP), reordenar.
 
-### 11. Generacion de PDF
+### 11. Examenes Remitidos (PDF externo)
+**Controlador:** `RemisionPdfController`
+Permite subir, descargar y eliminar el PDF del laboratorio externo para examenes con `es_remitido=true`. El archivo se guarda en `storage/public/examenes/{numeroOrden}/remision_{timestamp}.pdf`.
+
+**Reglas:**
+- Solo se puede subir si `es_remitido=true` y `estado != ENTREGADO`
+- Solo PDF, max 20 MB (`StoreRemisionPdfRequest`)
+- Al eliminar se borra el archivo fisico y se limpia `pdf_remision` en BD
+
+**Rutas:**
+- `POST /servicio-examen/{servicioExamen}/pdf-remision` → `remision.store`
+- `DELETE /servicio-examen/{servicioExamen}/pdf-remision` → `remision.destroy`
+- `GET /servicio-examen/{servicioExamen}/pdf-remision/download` → `remision.download`
+
+### 12. Generacion de PDF
 **Controlador:** `ResultadoPdfController`
 - **Orden de servicio** (`descargarOrden`): examenes solicitados con precios
-- **Resultados** (`generarPdf`/`generarPdfIndividual`): reporte de examenes VALIDADOS con encabezado, datos paciente, parametros, rangos, alertas, textos descriptivos, imagenes, firma digital + fecha validacion, pie de pagina.
+- **Resultados** (`generarPdf`/`generarPdfIndividual`): reporte de examenes VALIDADOS **no remitidos** con encabezado, datos paciente, parametros, rangos, alertas, textos descriptivos, imagenes, firma digital + fecha validacion, pie de pagina.
+- **Critico:** Ambos metodos filtran `->where('es_remitido', false)` para excluir examenes externos del PDF generado por DomPDF.
 
 **DomPDF:** Papel carta, vertical, fuente Carlito, remote enabled.
 **Archivo:** `Resultado_{documento}_{nombre}_{apellido}.pdf`
@@ -434,7 +463,7 @@ Imagenes asociadas (ECG, radiografias). Max 3 archivos por examen. Formatos: jpg
 - `GET /servicios/{id}/resultados-pdf`
 - `GET /servicios/{id}/examen/{servicioExamenId}/resultados-pdf`
 
-### 12. Perfil de Usuario
+### 13. Perfil de Usuario
 **Controlador:** `PerfilController`
 Edicion de nombre y contrasena. Requiere contrasena actual para cambiar.
 
@@ -464,7 +493,7 @@ storage/app/public/
   firmas/                 -> Firmas digitales de profesionales
   firmas-representante/   -> Firma del representante legal
   examenes/
-    {numeroOrden}/        -> Imagenes adjuntas por orden
+    {numeroOrden}/        -> Imagenes adjuntas por orden + remision_{timestamp}.pdf (PDF externo de examen remitido)
 ```
 
 Acceso publico: symlink `public/storage/ -> storage/app/public/` (`php artisan storage:link`).
@@ -489,9 +518,10 @@ app/
       ProfesionalController.php          # CRUD profesionales
       ResultadoAdjuntoController.php     # Adjuntos de resultados
       ResultadoExamenController.php      # Captura y evaluacion
-      ResultadoPdfController.php         # Generacion PDF
+      ResultadoPdfController.php         # Generacion PDF (excluye remitidos)
+      RemisionPdfController.php          # PDF externo de examenes remitidos
       ServicioController.php             # Ordenes de laboratorio
-    Requests/                            # 16 form requests
+    Requests/                            # 17 form requests (incluye StoreRemisionPdfRequest)
   Models/                                # 12 modelos Eloquent
 
 resources/views/

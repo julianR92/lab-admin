@@ -28,24 +28,70 @@ class ServicioController extends Controller
             $query->whereDate('fecha', '<=', $request->fecha_hasta);
         }
 
-        if ($request->filled('estado_pago')) {
-            $query->where('estado_pago', $request->estado_pago);
+        if ($request->filled('documento')) {
+            $documento = $request->documento;
+            $query->whereHas('cliente', function ($q) use ($documento) {
+                $q->where('documento', 'like', "%{$documento}%");
+            });
         }
 
         if ($request->filled('buscar')) {
             $termino = $request->buscar;
-            $query->where(function ($q) use ($termino) {
-                $q->whereHas('cliente', function ($clienteQuery) use ($termino) {
-                    $clienteQuery->where('nombre', 'like', "%{$termino}%")
-                        ->orWhere('apellido', 'like', "%{$termino}%")
-                        ->orWhere('documento', 'like', "%{$termino}%");
-                });
+            $query->whereHas('cliente', function ($q) use ($termino) {
+                $q->where('nombre', 'like', "%{$termino}%")
+                    ->orWhere('apellido', 'like', "%{$termino}%");
             });
         }
 
-        $servicios = $query->latest('fecha')->paginate(15);
+        if ($request->filled('examenes')) {
+            $examenesIds = $request->examenes;
+            $query->whereHas('serviciosExamen', function ($q) use ($examenesIds) {
+                $q->whereIn('examen_id', $examenesIds);
+            });
+        }
 
-        return view('servicios.index', compact('servicios'));
+        if ($request->filled('estado_examen')) {
+            $estadoExamen = $request->estado_examen;
+            $query->whereHas('serviciosExamen', function ($q) use ($estadoExamen) {
+                $q->where('estado', $estadoExamen);
+            });
+        }
+
+        if ($request->ajax()) {
+            $servicios = $query->latest('fecha')->get();
+
+            return response()->json([
+                'data' => $servicios->map(function ($servicio) {
+                    $estadoPagoBadge = match ($servicio->estado_pago) {
+                        'PENDIENTE' => '<span class="badge bg-warning text-dark">Pendiente</span>',
+                        'PARCIAL' => '<span class="badge bg-info">Parcial</span>',
+                        default => '<span class="badge bg-success">Pagado</span>',
+                    };
+
+                    return [
+                        'numero_orden' => $servicio->numero_orden,
+                        'fecha' => $servicio->fecha->format('d/m/Y'),
+                        'cliente_nombre' => $servicio->cliente->nombre_completo,
+                        'documento' => $servicio->cliente->documento,
+                        'total_examenes' => $servicio->serviciosExamen->count(),
+                        'valor_total' => '$'.number_format($servicio->valor_total, 0, ',', '.'),
+                        'estado_pago' => $estadoPagoBadge,
+                        'acciones' => $servicio->id,
+                    ];
+                }),
+            ]);
+        }
+
+        $examenesDisponibles = Examen::activos()->orderBy('nombre')->get();
+        $estadosExamen = [
+            'PENDIENTE' => 'Pendiente',
+            'EN_PROCESO' => 'En Proceso',
+            'COMPLETADO' => 'Completado',
+            'VALIDADO' => 'Validado',
+            'ENTREGADO' => 'Entregado',
+        ];
+
+        return view('servicios.index', compact('examenesDisponibles', 'estadosExamen'));
     }
 
     public function create()
@@ -77,7 +123,7 @@ class ServicioController extends Controller
             $valorPagado = $request->valor_pagado ?? 0;
             $estadoPago = $this->calcularEstadoPago($valorTotal, $valorPagado);
 
-            // Generar número de orden
+            // Generar nÃºmero de orden
             $numeroOrden = $this->generarNumeroOrden();
 
             // Crear servicio
@@ -125,7 +171,7 @@ class ServicioController extends Controller
         ]);
 
         $profesionales = Profesional::where('status', 1)
-            ->where('profesion', 'Bacteriólogo')
+            ->where('profesion', 'BacteriÃ³logo')
             ->orderBy('nombre')
             ->get();
 
@@ -134,13 +180,13 @@ class ServicioController extends Controller
 
     public function edit(Servicio $servicio)
     {
-        // Verificar que no tenga exámenes con resultados
+        // Verificar que no tenga exÃ¡menes con resultados
         $tieneResultados = $servicio->serviciosExamen()
             ->whereIn('estado', ['COMPLETADO', 'VALIDADO', 'ENTREGADO'])
             ->exists();
 
         if ($tieneResultados) {
-            return back()->with('error', 'No se puede editar un servicio con exámenes que ya tienen resultados.');
+            return back()->with('error', 'No se puede editar un servicio con exÃ¡menes que ya tienen resultados.');
         }
 
         $servicio->load(['cliente', 'serviciosExamen.examen']);
@@ -160,20 +206,20 @@ class ServicioController extends Controller
         try {
             DB::beginTransaction();
 
-            // Si se están actualizando exámenes, verificar que no tengan resultados
+            // Si se estÃ¡n actualizando exÃ¡menes, verificar que no tengan resultados
             if ($request->has('examenes')) {
                 $tieneResultados = $servicio->serviciosExamen()
                     ->whereIn('estado', ['COMPLETADO', 'VALIDADO', 'ENTREGADO'])
                     ->exists();
 
                 if ($tieneResultados) {
-                    return back()->with('error', 'No se pueden modificar exámenes que ya tienen resultados.');
+                    return back()->with('error', 'No se pueden modificar exÃ¡menes que ya tienen resultados.');
                 }
 
-                // Eliminar exámenes actuales solo si están pendientes
+                // Eliminar exÃ¡menes actuales solo si estÃ¡n pendientes
                 $servicio->serviciosExamen()->where('estado', 'PENDIENTE')->delete();
 
-                // Agregar nuevos exámenes
+                // Agregar nuevos exÃ¡menes
                 foreach ($request->examenes as $index => $examenId) {
                     ServicioExamen::create([
                         'servicio_id' => $servicio->id,
@@ -244,13 +290,13 @@ class ServicioController extends Controller
 
     public function destroy(Servicio $servicio)
     {
-        // Verificar que todos los exámenes estén pendientes
+        // Verificar que todos los exÃ¡menes estÃ©n pendientes
         $tieneExamenesEnProceso = $servicio->serviciosExamen()
             ->where('estado', '!=', 'PENDIENTE')
             ->exists();
 
         if ($tieneExamenesEnProceso) {
-            return back()->with('error', 'No se puede eliminar el servicio porque tiene exámenes en proceso.');
+            return back()->with('error', 'No se puede eliminar el servicio porque tiene exÃ¡menes en proceso.');
         }
 
         try {
@@ -267,13 +313,13 @@ class ServicioController extends Controller
     {
         $request->validate([
             'monto' => ['required', 'numeric', 'min:0.01'],
-            'medio_pago' => ['required', 'in:Efectivo,Tarjeta débito,Tarjeta crédito,Transferencia,Nequi,Daviplata'],
+            'medio_pago' => ['required', 'in:Efectivo,Tarjeta dÃ©bito,Tarjeta crÃ©dito,Transferencia,Nequi,Daviplata'],
         ], [
             'monto.required' => 'El monto es obligatorio.',
-            'monto.numeric' => 'El monto debe ser un número.',
+            'monto.numeric' => 'El monto debe ser un nÃºmero.',
             'monto.min' => 'El monto debe ser mayor a cero.',
             'medio_pago.required' => 'El medio de pago es obligatorio.',
-            'medio_pago.in' => 'El medio de pago seleccionado no es válido.',
+            'medio_pago.in' => 'El medio de pago seleccionado no es vÃ¡lido.',
         ]);
 
         $nuevoValorPagado = $servicio->valor_pagado + $request->monto;
@@ -323,24 +369,24 @@ class ServicioController extends Controller
             'estado' => ['required', 'in:PENDIENTE,EN_PROCESO,COMPLETADO,VALIDADO,ENTREGADO'],
         ], [
             'estado.required' => 'El estado es obligatorio.',
-            'estado.in' => 'El estado seleccionado no es válido.',
+            'estado.in' => 'El estado seleccionado no es vÃ¡lido.',
         ]);
 
         $estadoAnterior = $servicioExamen->estado;
         $nuevoEstado = $request->estado;
 
-        // Para exámenes remitidos, PENDIENTE → ENTREGADO es una transición válida directa
+        // Para exÃ¡menes remitidos, PENDIENTE â†’ ENTREGADO es una transiciÃ³n vÃ¡lida directa
         if ($servicioExamen->es_remitido && $nuevoEstado === 'ENTREGADO') {
             if ($estadoAnterior === 'ENTREGADO') {
                 return back()->with('error', 'El examen ya fue entregado.');
             }
         } elseif (! $this->esTransicionValida($estadoAnterior, $nuevoEstado)) {
-            return back()->with('error', 'Transición de estado no válida.');
+            return back()->with('error', 'TransiciÃ³n de estado no vÃ¡lida.');
         }
 
         $servicioExamen->estado = $nuevoEstado;
 
-        // Actualizar fechas según el estado
+        // Actualizar fechas segÃºn el estado
         switch ($nuevoEstado) {
             case 'EN_PROCESO':
                 if (! $servicioExamen->fecha_toma_muestra) {
