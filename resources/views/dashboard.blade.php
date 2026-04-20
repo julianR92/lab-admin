@@ -144,6 +144,28 @@
         </div> --}}
     </div>
 
+    <!-- Reportes -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <h5 class="mb-3">
+                <i class="fas fa-chart-bar me-2"></i>Reportes
+            </h5>
+        </div>
+        <div class="col-md-3 mb-3">
+            <a href="{{ route('caja.index') }}" class="text-decoration-none">
+                <div class="card border-0 shadow-sm h-100 hover-card" style="transition: all 0.3s ease;">
+                    <div class="card-body text-center py-4">
+                        <div class="mb-3">
+                            <i class="fas fa-cash-register fa-3x" style="color: #667eea;"></i>
+                        </div>
+                        <h6 class="mb-1">Caja</h6>
+                        <p class="text-muted small mb-0">Resumen financiero del período</p>
+                    </div>
+                </div>
+            </a>
+        </div>
+    </div>
+
     <!-- Configuración -->
     <div class="row mb-4">
         <div class="col-12">

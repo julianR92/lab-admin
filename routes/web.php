@@ -91,6 +91,9 @@ Route::middleware('auth')->group(function () {
     // Rutas de Perfil
     Route::get('/perfil', [\App\Http\Controllers\PerfilController::class, 'edit'])->name('perfil.edit');
     Route::put('/perfil', [\App\Http\Controllers\PerfilController::class, 'update'])->name('perfil.update');
+
+    // Rutas de Caja
+    Route::get('/caja', [\App\Http\Controllers\CajaController::class, 'index'])->name('caja.index');
 });
 
 // Rutas API

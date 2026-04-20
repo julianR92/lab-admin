@@ -157,6 +157,11 @@
                                 <i class="fas fa-flask me-1"></i>Exámenes
                             </a>
                         </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ route('caja.index') }}">
+                                <i class="fas fa-cash-register me-1"></i>Caja
+                            </a>
+                        </li>
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
                                 <i class="fas fa-user-circle me-2"></i>{{ Auth::user()->name }}
