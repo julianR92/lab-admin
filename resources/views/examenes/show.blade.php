@@ -529,7 +529,7 @@
                         <div class="mb-3">
                             <label for="formula_formula" class="form-label">Fórmula Matemática <span class="text-danger">*</span></label>
                             <input type="text" class="form-control font-monospace" id="formula_formula" name="formula_calculo[formula]" placeholder="Ej: (CREAT_URINARIA * VOLUMEN_24H) / (CREAT_SERICA * 1440)">
-                            <small class="text-muted">Use códigos de otros parámetros en mayúsculas</small>
+                            <small class="text-muted">Use códigos de otros parámetros en mayúsculas. Puede escribirlos con o sin llaves, se guardarán como <code>{CODIGO}</code></small>
                         </div>
                         <div class="mb-3">
                             <label for="formula_parametros" class="form-label">Parámetros Usados (separados por coma) <span class="text-danger">*</span></label>

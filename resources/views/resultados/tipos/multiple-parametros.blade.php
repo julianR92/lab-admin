@@ -142,8 +142,9 @@
             // Reemplazar códigos en la fórmula
             let expresion = formula.formula;
             Object.keys(valores).forEach(codigo => {
-                expresion = expresion.replace(new RegExp(codigo, 'g'), valores[codigo]);
-            });
+                 const regex = new RegExp(`\\{${codigo}\\}`, 'g');
+                expresion = expresion.replace(regex, valores[codigo]);
+             });
 
             try {
                 // Evaluar expresión de forma segura
@@ -170,6 +171,7 @@
 
     // Evaluador de expresiones matemáticas seguro
     function evaluarExpresion(expresion) {
+        console.log('Expresión a evaluar:', expresion);
         // Eliminar espacios
         expresion = expresion.replace(/\s/g, '');
 

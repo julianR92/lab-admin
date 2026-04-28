@@ -171,7 +171,7 @@ class ServicioController extends Controller
         ]);
 
         $profesionales = Profesional::where('status', 1)
-            ->where('profesion', 'BacteriÃ³logo')
+            //->where('profesion', 'BacteriÃ³logo')
             ->orderBy('nombre')
             ->get();
 

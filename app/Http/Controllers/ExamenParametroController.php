@@ -29,6 +29,14 @@ class ExamenParametroController extends Controller
             // Limpiar formula_calculo si no es calculado
             if (! $datos['es_calculado']) {
                 $datos['formula_calculo'] = null;
+            } elseif (! empty($datos['formula_calculo']['formula'])) {
+                $parametros = $datos['formula_calculo']['parametros'] ?? [];
+                $formula = $datos['formula_calculo']['formula'];
+                // Envolver cada código de parámetro en {} si aún no lo está
+                foreach ($parametros as $codigo) {
+                    $formula = preg_replace('/(?<!\{)'.preg_quote($codigo, '/').'(?!\})/', '{'.$codigo.'}', $formula);
+                }
+                $datos['formula_calculo']['formula'] = $formula;
             }
 
             // Limpiar opciones_select si no es SELECT
@@ -87,8 +95,16 @@ class ExamenParametroController extends Controller
             // Limpiar formula_calculo si no es calculado o si está vacío
             if (! $datos['es_calculado']) {
                 $datos['formula_calculo'] = null;
-            } elseif (isset($datos['formula_calculo']) && (empty($datos['formula_calculo']['formula']) && empty($datos['formula_calculo']['parametros']))) {
+            } elseif (isset($datos['formula_calculo']) && empty($datos['formula_calculo']['formula'])) {
                 $datos['formula_calculo'] = null;
+            } elseif (! empty($datos['formula_calculo']['formula'])) {
+                $parametros = $datos['formula_calculo']['parametros'] ?? [];
+                $formula = $datos['formula_calculo']['formula'];
+                // Envolver cada código de parámetro en {} si aún no lo está
+                foreach ($parametros as $codigo) {
+                    $formula = preg_replace('/(?<!\{)'.preg_quote($codigo, '/').'(?!\})/', '{'.$codigo.'}', $formula);
+                }
+                $datos['formula_calculo']['formula'] = $formula;
             }
 
             // Limpiar opciones_select si no es SELECT

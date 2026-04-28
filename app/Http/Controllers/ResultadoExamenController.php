@@ -421,7 +421,7 @@ class ResultadoExamenController extends Controller
             // Reemplazar en la fórmula
             $expresion = $formula;
             foreach ($valores as $codigo => $valor) {
-                $expresion = str_replace($codigo, $valor, $expresion);
+                $expresion = str_replace('{' . $codigo . '}', $valor, $expresion);
             }
 
             try {
