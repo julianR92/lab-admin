@@ -381,72 +381,119 @@ class ResultadoExamenController extends Controller
     }
 
     /**
-     * Calcular parámetros calculados
+     * Calcular parámetros calculados.
+     *
+     * Soporta fórmulas encadenadas (cuando una fórmula depende del resultado
+     * de otra) mediante resolución iterativa multi-pasada: en cada pasada se
+     * intenta calcular los parámetros que aún no se han resuelto; si algún
+     * parámetro depende de otro calculado que ya quedó listo, se resolverá
+     * en la siguiente pasada. Termina cuando una pasada no produce cambios
+     * (convergió o hay ciclo).
      */
     private function calcularParametrosCalculados(ServicioExamen $servicioExamen, array $contexto)
     {
         $parametrosCalculados = $servicioExamen->examen->parametros()
             ->where('es_calculado', true)
             ->where('status', true)
+            ->orderBy('orden')
             ->get();
 
-        foreach ($parametrosCalculados as $parametro) {
-            if (! $parametro->formula_calculo) {
-                continue;
-            }
+        if ($parametrosCalculados->isEmpty()) {
+            return;
+        }
 
-            $formula = $parametro->formula_calculo['formula'] ?? null;
-            $parametrosNecesarios = $parametro->formula_calculo['parametros'] ?? [];
+        $maxPasadas = $parametrosCalculados->count() + 1;
+        $resueltos = [];
 
-            if (! $formula || empty($parametrosNecesarios)) {
-                continue;
-            }
+        for ($pasada = 0; $pasada < $maxPasadas; $pasada++) {
+            $cambioEnPasada = false;
 
-            // Obtener valores de los parámetros necesarios
-            $valores = [];
-            foreach ($parametrosNecesarios as $codigo) {
-                $resultado = ResultadoExamen::whereHas('parametro', function ($q) use ($codigo) {
-                    $q->where('codigo_parametro', $codigo);
-                })
-                    ->where('servicio_examen_id', $servicioExamen->id)
-                    ->first();
-
-                if (! $resultado || $resultado->valor_numerico === null) {
-                    continue 2; // Saltar este parámetro calculado
+            foreach ($parametrosCalculados as $parametro) {
+                if (in_array($parametro->codigo_parametro, $resueltos, true)) {
+                    continue;
                 }
 
-                $valores[$codigo] = $resultado->valor_numerico;
+                if (! $parametro->formula_calculo) {
+                    continue;
+                }
+
+                $formula = $parametro->formula_calculo['formula'] ?? null;
+                $parametrosNecesarios = $parametro->formula_calculo['parametros'] ?? [];
+
+                if (! $formula || empty($parametrosNecesarios)) {
+                    continue;
+                }
+
+                $valores = [];
+                $faltanValores = false;
+                foreach ($parametrosNecesarios as $codigo) {
+                    $resultado = ResultadoExamen::whereHas('parametro', function ($q) use ($codigo) {
+                        $q->where('codigo_parametro', $codigo);
+                    })
+                        ->where('servicio_examen_id', $servicioExamen->id)
+                        ->first();
+
+                    if (! $resultado || $resultado->valor_numerico === null) {
+                        $faltanValores = true;
+                        break;
+                    }
+
+                    $valores[$codigo] = $resultado->valor_numerico;
+                }
+
+                if ($faltanValores) {
+                    continue;
+                }
+
+                $expresion = $formula;
+                foreach ($valores as $codigo => $valor) {
+                    $expresion = str_replace('{'.$codigo.'}', $valor, $expresion);
+                }
+
+                if (! preg_match('/^[0-9+\-*\/(). ]+$/', $expresion)) {
+                    Log::warning("Expresión insegura para {$parametro->codigo_parametro}: {$expresion}");
+
+                    continue;
+                }
+
+                try {
+                    $valorCalculado = eval("return {$expresion};");
+
+                    $resultado = ResultadoExamen::firstOrNew([
+                        'servicio_examen_id' => $servicioExamen->id,
+                        'parametro_id' => $parametro->id,
+                    ]);
+
+                    $resultado->valor_numerico = round($valorCalculado, $parametro->decimales ?? 2);
+                    $resultado->unidad_medida = $parametro->unidad_medida;
+                    $resultado->capturado_por = Auth::id();
+                    $resultado->save();
+
+                    $resultado->evaluar($contexto);
+                    $resultado->save();
+
+                    $resueltos[] = $parametro->codigo_parametro;
+                    $cambioEnPasada = true;
+                } catch (\Exception $e) {
+                    Log::error("Error calculando parámetro {$parametro->nombre_parametro}: ".$e->getMessage());
+                }
             }
 
-            // Reemplazar en la fórmula
-            $expresion = $formula;
-            foreach ($valores as $codigo => $valor) {
-                $expresion = str_replace('{' . $codigo . '}', $valor, $expresion);
+            if (! $cambioEnPasada) {
+                break;
             }
+        }
 
-            try {
-                // Evaluar expresión (usar eval con cuidado, mejor usar una librería)
-                $valorCalculado = eval("return {$expresion};");
+        $noResueltos = $parametrosCalculados
+            ->whereNotIn('codigo_parametro', $resueltos)
+            ->pluck('codigo_parametro')
+            ->all();
 
-                // Guardar resultado calculado
-                $resultado = ResultadoExamen::firstOrNew([
-                    'servicio_examen_id' => $servicioExamen->id,
-                    'parametro_id' => $parametro->id,
-                ]);
-
-                $resultado->valor_numerico = round($valorCalculado, $parametro->decimales ?? 2);
-                $resultado->unidad_medida = $parametro->unidad_medida;
-                $resultado->capturado_por = Auth::id();
-                $resultado->save();
-
-                // Evaluar
-                $resultado->evaluar($contexto);
-                $resultado->save();
-
-            } catch (\Exception $e) {
-                // Log error pero continuar
-                Log::error("Error calculando parámetro {$parametro->nombre_parametro}: ".$e->getMessage());
-            }
+        if (! empty($noResueltos)) {
+            Log::warning('Parámetros calculados sin resolver (¿ciclo o dependencia faltante?)', [
+                'servicio_examen_id' => $servicioExamen->id,
+                'parametros' => $noResueltos,
+            ]);
         }
     }
 

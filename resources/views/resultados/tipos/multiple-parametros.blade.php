@@ -79,10 +79,9 @@
         ];
     })->values()) !!};
 
-    // Mapeo de códigos a inputs
-    const codigoAInput = {!! json_encode($servicioExamen->examen->parametros->where('es_calculado', false)->pluck('codigo_parametro')->mapWithKeys(function($codigo) use ($servicioExamen) {
-        $param = $servicioExamen->examen->parametros->firstWhere('codigo_parametro', $codigo);
-        return [$codigo => "input[name='resultados[" . $param->id . "][valor]']"];
+    // Mapeo de códigos a inputs (manuales + calculados, para soportar fórmulas encadenadas)
+    const codigoAInput = {!! json_encode($servicioExamen->examen->parametros->mapWithKeys(function($p) {
+        return [$p->codigo_parametro => "input[name='resultados[" . $p->id . "][valor]']"];
     })) !!};
 
     document.addEventListener('DOMContentLoaded', function() {
@@ -103,68 +102,100 @@
     });
 
     function calcularParametros() {
-        formulasCalculo.forEach(formula => {
-            if (!formula.formula || !formula.parametros || formula.parametros.length === 0) {
-                return;
-            }
+        // Resolución iterativa: en cada pasada se calculan los parámetros
+        // cuyas dependencias ya tienen valor. Si una fórmula depende de otra
+        // calculada, en la pasada siguiente ya la encontrará lista.
+        const MAX_PASADAS = formulasCalculo.length + 1;
+        const resueltosEnSesion = new Set();
+        let cambioEnPasada = true;
+        let pasadas = 0;
 
-            // Obtener valores de los parámetros necesarios
-            const valores = {};
-            let todosTienenValor = true;
+        while (cambioEnPasada && pasadas < MAX_PASADAS) {
+            cambioEnPasada = false;
+            pasadas++;
 
-            formula.parametros.forEach(codigo => {
-                const inputSelector = codigoAInput[codigo];
-                if (!inputSelector) {
-                    console.warn(`No se encontró input para código: ${codigo}`);
-                    todosTienenValor = false;
+            formulasCalculo.forEach(formula => {
+                if (!formula.formula || !formula.parametros || formula.parametros.length === 0) {
+                    return;
+                }
+                if (resueltosEnSesion.has(formula.codigo)) {
                     return;
                 }
 
-                const input = document.querySelector(inputSelector);
-                if (!input || !input.value || input.value.trim() === '') {
-                    todosTienenValor = false;
+                const inputCalculado = document.querySelector(formula.input_selector);
+                if (!inputCalculado) return;
+
+                const valores = {};
+                let todosTienenValor = true;
+
+                formula.parametros.forEach(codigo => {
+                    const inputSelector = codigoAInput[codigo];
+                    if (!inputSelector) {
+                        console.warn(`No se encontró input para código: ${codigo}`);
+                        todosTienenValor = false;
+                        return;
+                    }
+
+                    const input = document.querySelector(inputSelector);
+                    if (!input || !input.value || input.value.trim() === '' || isNaN(parseFloat(input.value))) {
+                        todosTienenValor = false;
+                        return;
+                    }
+
+                    valores[codigo] = parseFloat(input.value);
+                });
+
+                if (!todosTienenValor) {
+                    // Solo limpiar al final del proceso, para no borrar resultados
+                    // intermedios que esperan ser usados por otra fórmula.
                     return;
                 }
 
-                valores[codigo] = parseFloat(input.value);
-            });
+                // Reemplazar códigos en la fórmula
+                let expresion = formula.formula;
+                Object.keys(valores).forEach(codigo => {
+                    const regex = new RegExp(`\\{${codigo}\\}`, 'g');
+                    expresion = expresion.replace(regex, valores[codigo]);
+                });
 
-            // Si faltan valores, limpiar el campo calculado
-            const inputCalculado = document.querySelector(formula.input_selector);
-            if (!todosTienenValor) {
-                if (inputCalculado) {
-                    inputCalculado.value = '';
-                    inputCalculado.style.backgroundColor = '#fff3cd'; // Amarillo de advertencia
-                }
-                return;
-            }
+                try {
+                    const resultado = evaluarExpresion(expresion);
 
-            // Reemplazar códigos en la fórmula
-            let expresion = formula.formula;
-            Object.keys(valores).forEach(codigo => {
-                 const regex = new RegExp(`\\{${codigo}\\}`, 'g');
-                expresion = expresion.replace(regex, valores[codigo]);
-             });
-
-            try {
-                // Evaluar expresión de forma segura
-                const resultado = evaluarExpresion(expresion);
-
-                if (inputCalculado && !isNaN(resultado)) {
-                    inputCalculado.value = resultado.toFixed(4);
-                    inputCalculado.style.backgroundColor = '#d1e7dd'; // Verde de éxito
-
-                    // Resetear color después de 2 segundos
-                    setTimeout(() => {
-                        inputCalculado.style.backgroundColor = '#e9ecef';
-                    }, 2000);
-                }
-            } catch (error) {
-                console.error('Error al calcular fórmula:', error);
-                if (inputCalculado) {
+                    if (!isNaN(resultado)) {
+                        const nuevoValor = resultado.toFixed(4);
+                        if (inputCalculado.value !== nuevoValor) {
+                            inputCalculado.value = nuevoValor;
+                            inputCalculado.style.backgroundColor = '#d1e7dd';
+                            cambioEnPasada = true;
+                        }
+                        resueltosEnSesion.add(formula.codigo);
+                    }
+                } catch (error) {
+                    console.error('Error al calcular fórmula:', error);
                     inputCalculado.value = 'ERROR';
-                    inputCalculado.style.backgroundColor = '#f8d7da'; // Rojo de error
+                    inputCalculado.style.backgroundColor = '#f8d7da';
+                    resueltosEnSesion.add(formula.codigo); // no reintentar
                 }
+            });
+        }
+
+        // Pasada final: marcar en amarillo los calculados que nunca se resolvieron
+        // (dependencias incompletas o ciclo). Resetear color de los que sí se resolvieron.
+        formulasCalculo.forEach(formula => {
+            const inputCalculado = document.querySelector(formula.input_selector);
+            if (!inputCalculado) return;
+
+            if (!resueltosEnSesion.has(formula.codigo)) {
+                if (inputCalculado.value !== '' && inputCalculado.value !== 'ERROR') {
+                    // El valor ya estaba antes (resultado guardado previamente); no borrar.
+                    return;
+                }
+                inputCalculado.value = '';
+                inputCalculado.style.backgroundColor = '#fff3cd';
+            } else {
+                setTimeout(() => {
+                    inputCalculado.style.backgroundColor = '#e9ecef';
+                }, 2000);
             }
         });
     }
