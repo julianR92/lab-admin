@@ -751,11 +751,16 @@
                                         $simbolo = '*';
                                     }
                                 }
+
+                                $unidadMostrar = $resultado->unidad_medida ?? $resultado->parametro->unidad_medida;
+                                if (in_array(strtolower(trim((string) $unidadMostrar)), ['', 'null'])) {
+                                    $unidadMostrar = '-';
+                                }
                             @endphp
                             <tr>
                                 <td class="col-parametro">{{ $resultado->parametro->nombre_parametro }}</td>
                                 <td class="col-resultado {{ $claseAlerta }}">{{ $valorMostrar }}{{ $simbolo }}</td>
-                                <td class="col-unidad">{{ $resultado->unidad_medida ?? $resultado->parametro->unidad_medida }}</td>
+                                <td class="col-unidad">{{ $unidadMostrar }}</td>
                                 <td class="col-referencia">
                                     @if ($resultado->parametro->mostrar_todos_rangos && $resultado->parametro->valoresReferencia->isNotEmpty())
                                         @foreach ($resultado->parametro->valoresReferencia as $vr)
