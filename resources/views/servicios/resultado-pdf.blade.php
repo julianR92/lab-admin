@@ -353,7 +353,7 @@
 
         /* ============ IMÁGENES ADJUNTAS ============ */
         .imagenes-container {
-            margin: 15px 0;
+            margin: 5px 0 0 0;
             text-align: center;
             page-break-inside: avoid;
         }
@@ -398,7 +398,8 @@
 
         /* ============ FIRMA ============ */
         .firma-section {
-            margin-top: 15px;
+            margin-top: 0;
+            padding-top: 0;
             page-break-inside: avoid;
         }
 
@@ -406,20 +407,28 @@
             text-align: right;
             width: auto;
             margin: 0;
+            padding: 0;
+            line-height: 0.9;
         }
 
         .firma-imagen {
-            margin-bottom: 4px;
+            margin: 0;
+            padding: 0;
+            line-height: 0;
+            height: 38px;
         }
 
         .firma-imagen img {
             max-width: 150px;
-            max-height: 40px;
+            max-height: 38px;
+            display: inline-block;
+            vertical-align: bottom;
         }
 
         .firma-linea {
             /* border-top: 1px solid #333; */
-            padding-top: 5px;
+            padding: 0;
+            margin: 0;
             display: inline-block;
             min-width: 150px;
         }
@@ -444,8 +453,8 @@
 
         /* ============ FIRMA REPRESENTANTE LEGAL ============ */
         .firma-representante-section {
-            margin-top: 30px;
-            margin-bottom: 20px;
+            margin-top: 8px;
+            margin-bottom: 10px;
             page-break-inside: avoid;
             text-align: center;
         }
@@ -734,58 +743,25 @@
             @endif
 
              @if($servicioExamen->observaciones || $servicioExamen->examen->tecnica || $servicioExamen->fecha_resultado)
-                <table style="width: 100%; margin-top: 4px;">
+                <table style="width: 100%; margin: 1px 0 0 0; border-collapse: collapse; line-height: 1;">
                     <tr>
-                        <td class="tecnica-info" style="text-align: left; vertical-align: top; width: 60%;">
+                        <td class="tecnica-info" style="text-align: left; vertical-align: top; width: 60%; padding: 0;">
                             @if($servicioExamen->observaciones)
-                                <strong>Observacion Medica:</strong> {{ $servicioExamen->observaciones }}
+                                <strong>Observacion Medica:</strong> {{ $servicioExamen->observaciones }}@if($servicioExamen->fecha_resultado) <br> @endif
                             @endif
-                            <br>
-                             @if($servicioExamen->fecha_resultado)
-                                <strong>Fecha: </strong>{{ $servicioExamen->fecha_resultado }}
+                            @if($servicioExamen->fecha_resultado)
+                                <strong>Fecha:</strong> {{ $servicioExamen->fecha_resultado }}
                             @endif
                         </td>
-                        <td class="tecnica-info" style="text-align: right; vertical-align: top; width: 40%;">
+                        <td class="tecnica-info" style="text-align: right; vertical-align: top; width: 40%; padding: 0;">
                             @if($servicioExamen->examen->tecnica)
                                 <strong>Técnica:</strong> {{ $servicioExamen->examen->tecnica }}
                             @endif
-
                         </td>
                     </tr>
                 </table>
             @endif
 
-            {{-- <!-- Textos Descriptivos (solo para NO TEXTO_DESCRIPTIVO) -->
-            @if(!$esTextoDescriptivo)
-                @php
-                    $observaciones = $resultados->whereNotNull('observaciones')->first()?->observaciones;
-                    $interpretacion = $resultados->whereNotNull('interpretacion')->first()?->interpretacion;
-                    $conclusiones = $resultados->whereNotNull('conclusiones')->first()?->conclusiones;
-                @endphp
-
-                @if($interpretacion)
-                    <div class="texto-bloque">
-                        <strong>INTERPRETACIÓN:</strong>
-                        {{ $interpretacion }}
-                    </div>
-                @endif
-
-                @if($observaciones)
-                    <div class="texto-bloque">
-                        <strong>OBSERVACIONES:</strong>
-                        {{ $observaciones }}
-                    </div>
-                @endif
-
-                @if($conclusiones)
-                    <div class="texto-bloque">
-                        <strong>CONCLUSIÓN:</strong>
-                        {{ $conclusiones }}
-                    </div>
-                @endif
-            @endif --}}
-
-            <!-- IMÁGENES ADJUNTAS (máx 3 por fila) -->
             @if($servicioExamen->adjuntos && $servicioExamen->adjuntos->count() > 0)
                 <div class="imagenes-container">
                     @php
