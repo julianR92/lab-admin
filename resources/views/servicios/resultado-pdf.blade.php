@@ -631,52 +631,91 @@
                     </table>
                 </div>
             @elseif($esCualitativoLista && $resultados->count() > 0)
-                <!-- FORMATO CUALITATIVO (LISTA) -->
-                <div class="resultado-cualitativo">
-                    <div class="titulo-examen">{{ strtoupper($servicioExamen->examen->nombre) }}</div>
+                <!-- FORMATO CUALITATIVO (mismo estilo que tabla-resultados) -->
+                <div style="font-weight: bold; font-size: 11pt; margin: 5px 0 5px 0; color: #333; border-bottom: 1px solid #6d6b6b; padding-bottom: 3px; font-family: 'Carlito', sans-serif;">
+                    {{ strtoupper($servicioExamen->examen->nombre) }}
+                </div>
 
-                    @php
-                        // Agrupar resultados por sección
-                        $resultadosAgrupados = $resultados->groupBy(function($resultado) {
-                            return $resultado->parametro->seccion ?? '';
-                        });
+                @php
+                    $resultadosAgrupados = $resultados->groupBy(function($resultado) {
+                        return $resultado->parametro->seccion ?? '';
+                    });
+                    $sinSeccion = $resultadosAgrupados->pull('');
+                    $conSeccion = $resultadosAgrupados->sortKeys();
+                    if ($sinSeccion && $sinSeccion->isNotEmpty()) {
+                        $conSeccion->put('', $sinSeccion);
+                    }
+                    $resultadosOrdenados = $conSeccion;
+                @endphp
 
-                        // Separar los que tienen sección de los que no
-                        $sinSeccion = $resultadosAgrupados->pull('');
-                        $conSeccion = $resultadosAgrupados->sortKeys();
-
-                        // Si hay resultados sin sección, agregarlos al final
-                        if ($sinSeccion && $sinSeccion->isNotEmpty()) {
-                            $conSeccion->put('', $sinSeccion);
-                        }
-
-                        $resultadosOrdenados = $conSeccion;
-                    @endphp
-
-                    @foreach($resultadosOrdenados as $seccion => $resultadosSeccion)
-                        @if($seccion !== '')
-                            <div class="seccion-titulo">{{ strtoupper($seccion) }}</div>
-                        @endif
-
-                        <table class="tabla-cualitativa">
-                            @foreach($resultadosSeccion as $resultado)
+                <table class="tabla-resultados">
+                    <thead>
+                        <tr>
+                            <th style="width: 40%; text-align: left;">PARÁMETRO</th>
+                            <th style="width: 25%; text-align: center;">RESULTADO</th>
+                            <th style="width: 35%; text-align: center;">VALORES REFERENCIA</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($resultadosOrdenados as $seccion => $resultadosSeccion)
+                            @if($seccion !== '')
                                 <tr>
-                                    <td class="parametro-nombre">{{ $resultado->parametro->nombre_parametro }}:</td>
-                                    <td class="parametro-valor">
-                                        @if($resultado->valor_numerico !== null)
-                                            {{ number_format($resultado->valor_numerico, $resultado->parametro->decimales ?? 2, '.', '') }}
-                                            {{ $resultado->unidad_medida ?? $resultado->parametro->unidad_medida }}
-                                        @elseif($resultado->valor_cualitativo !== null)
-                                            {{ $resultado->valor_cualitativo }}
+                                    <td colspan="3" style="font-weight: bold; background-color: #e0e0e0; padding: 3px 8px; text-align: left; font-size: 9pt;">
+                                        {{ strtoupper($seccion) }}
+                                    </td>
+                                </tr>
+                            @endif
+
+                            @foreach($resultadosSeccion as $resultado)
+                                @php
+                                    $valorMostrar = '';
+                                    if ($resultado->valor_numerico !== null) {
+                                        $decimales = $resultado->parametro->decimales ?? 2;
+                                        $valorMostrar = number_format($resultado->valor_numerico, $decimales, '.', '');
+                                    } elseif ($resultado->valor_cualitativo !== null) {
+                                        $valorMostrar = $resultado->valor_cualitativo;
+                                    } elseif ($resultado->valor_texto !== null) {
+                                        $valorMostrar = $resultado->valor_texto;
+                                    }
+
+                                    $claseAlerta = '';
+                                    $simbolo = '';
+                                    if ($resultado->fuera_rango) {
+                                        if ($resultado->tipo_alerta === 'BAJO') {
+                                            $claseAlerta = 'valor-bajo';
+                                            $simbolo = '*';
+                                        } elseif (in_array($resultado->tipo_alerta, ['ALTO', 'CRITICO'])) {
+                                            $claseAlerta = 'valor-alto';
+                                            $simbolo = '*';
+                                        }
+                                    }
+                                @endphp
+                                <tr>
+                                    <td style="text-align: left;">{{ $resultado->parametro->nombre_parametro }}</td>
+                                    <td class="{{ $claseAlerta }}" style="text-align: center; font-weight: bold;">{{ $valorMostrar }}{{ $simbolo }}</td>
+                                    <td style="text-align: center;">
+                                        @if ($resultado->parametro->mostrar_todos_rangos && $resultado->parametro->valoresReferencia->isNotEmpty())
+                                            @foreach ($resultado->parametro->valoresReferencia as $vr)
+                                                <div>
+                                                    @if ($vr->condicion_especial)
+                                                    @elseif ($vr->genero || $vr->edad_min !== null || $vr->edad_max !== null)
+                                                        <strong>
+                                                            @if ($vr->genero){{ $vr->genero === 'M' ? 'H' : 'M' }}. @endif
+                                                            @if ($vr->edad_min !== null || $vr->edad_max !== null){{ $vr->edad_min ?? 0 }}-{{ $vr->edad_max ?? '+' }}a:@endif
+                                                        </strong>
+                                                    @endif
+                                                    {{ $vr->rango_texto }}
+                                                </div>
+                                            @endforeach
                                         @else
-                                            {{ $resultado->valor_texto }}
+                                            {{ $resultado->rango_referencia ?? '–' }}
                                         @endif
                                     </td>
                                 </tr>
                             @endforeach
-                        </table>
-                    @endforeach
-                </div>
+                        @endforeach
+                    </tbody>
+                </table>
             @elseif($hayResultadosTabla && $resultados->count() > 0)
                 <!-- TABLA DE RESULTADOS -->
                 <table class="tabla-resultados">
