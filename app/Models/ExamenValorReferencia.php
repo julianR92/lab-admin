@@ -297,17 +297,27 @@ class ExamenValorReferencia extends Model
         $decimales = $this->parametro?->decimales ?? 2;
         $prefijo = $this->obtenerPrefijoContexto();
 
+        // Formatea con decimales solo si el valor no es entero
+        $formatNum = function ($v) use ($decimales) {
+            $f = (float) $v;
+            if (floor($f) == $f) {
+                return number_format($f, 0, '.', '');
+            }
+
+            return number_format($f, $decimales, '.', '');
+        };
+
         switch ($this->tipo_referencia) {
             case 'RANGO':
                 $partes = [];
                 if ($this->valor_min !== null) {
-                    $partes[] = number_format((float) $this->valor_min, $decimales, '.', '');
+                    $partes[] = $formatNum($this->valor_min);
                 }
                 if ($this->valor_max !== null) {
                     if (! empty($partes)) {
                         $partes[] = '-';
                     }
-                    $partes[] = number_format((float) $this->valor_max, $decimales, '.', '');
+                    $partes[] = $formatNum($this->valor_max);
                 }
 
                 $rango = implode(' ', $partes).($this->parametro && $this->parametro->unidad_medida ? ' '.$this->parametro->unidad_medida : '');
@@ -320,11 +330,11 @@ class ExamenValorReferencia extends Model
                 $rango = '';
 
                 if ($this->valor_min !== null && $this->valor_max !== null) {
-                    $rango = number_format((float) $this->valor_min, $decimales, '.', '').' - '.number_format((float) $this->valor_max, $decimales, '.', '');
+                    $rango = $formatNum($this->valor_min).' - '.$formatNum($this->valor_max);
                 } elseif ($this->valor_min !== null) {
-                    $rango = number_format((float) $this->valor_min, $decimales, '.', '').' +';
+                    $rango = $formatNum($this->valor_min).' +';
                 } elseif ($this->valor_max !== null) {
-                    $rango = '0 - '.number_format((float) $this->valor_max, $decimales, '.', '');
+                    $rango = '0 - '.$formatNum($this->valor_max);
                 }
 
                 $texto = $categoria.': '.$rango;
