@@ -569,6 +569,20 @@
 
     <!-- ============ RESULTADOS POR CATEGORÍA/EXAMEN ============ -->
     @php
+        // DomPDF + Carlito no tiene glifos para U+2070-U+2079 (⁰⁴⁵⁶⁷⁸⁹).
+        // Convertimos todos los superíndices unicode a <sup>N</sup> para que rendericen consistentemente.
+        $formatSup = function($texto) {
+            if ($texto === null || $texto === '') {
+                return '';
+            }
+            $map = [
+                '⁰' => '<sup>0</sup>', '¹' => '<sup>1</sup>', '²' => '<sup>2</sup>',
+                '³' => '<sup>3</sup>', '⁴' => '<sup>4</sup>', '⁵' => '<sup>5</sup>',
+                '⁶' => '<sup>6</sup>', '⁷' => '<sup>7</sup>', '⁸' => '<sup>8</sup>',
+                '⁹' => '<sup>9</sup>',
+            ];
+            return strtr(e($texto), $map);
+        };
         $examenesAgrupados = $servicio->serviciosExamen->groupBy(function($se) {
             return $se->examen->categoria->categoria ?? 'OTROS';
         });
@@ -696,10 +710,10 @@
                                     <td style="text-align: center;">
                                         @if ($resultado->parametro->mostrar_todos_rangos && $resultado->parametro->valoresReferencia->isNotEmpty())
                                             @foreach ($resultado->parametro->valoresReferencia as $vr)
-                                                <div>{{ $vr->rango_texto }}</div>
+                                                <div>{!! $formatSup($vr->rango_texto) !!}</div>
                                             @endforeach
                                         @else
-                                            {{ $resultado->rango_referencia ?? '–' }}
+                                            {!! $resultado->rango_referencia ? $formatSup($resultado->rango_referencia) : '–' !!}
                                         @endif
                                     </td>
                                 </tr>
@@ -751,14 +765,14 @@
                             <tr>
                                 <td class="col-parametro">{{ $resultado->parametro->nombre_parametro }}</td>
                                 <td class="col-resultado {{ $claseAlerta }}">{{ $valorMostrar }}{{ $simbolo }}</td>
-                                <td class="col-unidad">{{ $unidadMostrar }}</td>
+                                <td class="col-unidad">{!! $formatSup($unidadMostrar) !!}</td>
                                 <td class="col-referencia">
                                     @if ($resultado->parametro->mostrar_todos_rangos && $resultado->parametro->valoresReferencia->isNotEmpty())
                                         @foreach ($resultado->parametro->valoresReferencia as $vr)
-                                            <div>{{ $vr->rango_texto }}</div>
+                                            <div>{!! $formatSup($vr->rango_texto) !!}</div>
                                         @endforeach
                                     @else
-                                        {{ $resultado->rango_referencia ?? '–' }}
+                                        {!! $resultado->rango_referencia ? $formatSup($resultado->rango_referencia) : '–' !!}
                                     @endif
                                 </td>
                             </tr>
