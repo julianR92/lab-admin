@@ -322,7 +322,7 @@ class ExamenValorReferencia extends Model
 
                 $rango = implode(' ', $partes).($this->parametro && $this->parametro->unidad_medida ? ' '.$this->parametro->unidad_medida : '');
 
-                return $prefijo ? $prefijo.': '.$rango : $rango;
+                return $prefijo ? $prefijo.' '.$rango : $rango;
 
             case 'CATEGORIZADO':
                 // Formato: Categoría: min - max (sin operadores)
@@ -344,7 +344,7 @@ class ExamenValorReferencia extends Model
             case 'CUALITATIVO':
                 $valor = $this->valor_cualitativo ?? '-';
 
-                return $prefijo ? $prefijo.': '.$valor : $valor;
+                return $prefijo ? $prefijo.' '.$valor : $valor;
 
             case 'INFORMATIVO':
                 return $this->descripcion ?? 'Informativo';
@@ -375,7 +375,7 @@ class ExamenValorReferencia extends Model
         if ($this->edad_min !== null || $this->edad_max !== null) {
             $edadMin = $this->edad_min ?? 0;
             $edadMax = $this->edad_max ? $this->edad_max.' años' : '+ años';
-            $partes[] = "({$edadMin}-{$edadMax})";
+            $partes[] = "({$edadMin} - {$edadMax})";
         }
 
         return ! empty($partes) ? implode(' ', $partes) : null;
