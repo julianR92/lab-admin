@@ -670,7 +670,7 @@
                                 @php
                                     $valorMostrar = '';
                                     if ($resultado->valor_numerico !== null) {
-                                        $decimales = $resultado->parametro->decimales ?? 2;
+                                        $decimales = $resultado->parametro->getDecimalesEfectivos();
                                         $valorMostrar = number_format($resultado->valor_numerico, $decimales, '.', '');
                                     } elseif ($resultado->valor_cualitativo !== null) {
                                         $valorMostrar = $resultado->valor_cualitativo;
@@ -732,7 +732,7 @@
                             @php
                                 $valorMostrar = '';
                                 if ($resultado->valor_numerico !== null) {
-                                    $decimales = $resultado->parametro->decimales ?? 2;
+                                    $decimales = $resultado->parametro->getDecimalesEfectivos();
                                     $valorMostrar = number_format($resultado->valor_numerico, $decimales, '.', '');
                                 } elseif ($resultado->valor_cualitativo !== null) {
                                     $valorMostrar = $resultado->valor_cualitativo;

@@ -90,6 +90,15 @@ class ExamenParametro extends Model
         return in_array($this->tipo_dato, ['DECIMAL', 'INTEGER']);
     }
 
+    public function getDecimalesEfectivos(): int
+    {
+        if ($this->tipo_dato === 'INTEGER') {
+            return 0;
+        }
+
+        return (int) ($this->decimales ?? 2);
+    }
+
     public function getOpcionesSelectArray(): array
     {
         return $this->opciones_select ?? [];

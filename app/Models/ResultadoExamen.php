@@ -194,7 +194,7 @@ class ResultadoExamen extends Model
 
         // Valores numéricos
         if ($this->valor_numerico !== null) {
-            $decimales = $parametro ? ($parametro->decimales ?? 2) : 2;
+            $decimales = $parametro ? $parametro->getDecimalesEfectivos() : 2;
             $valor = number_format($this->valor_numerico, $decimales, '.', ',');
 
             // Agregar unidad de medida
