@@ -470,17 +470,52 @@ class ResultadoExamen extends Model
                     }
                 }
 
-                // Para tipo CATEGORIZADO, buscar en qué categoría cae
+                // Para tipo CATEGORIZADO, verificar si el valor cae geométricamente en la categoría.
+                // No usamos $evaluacion['dentro_rango'] porque ese flag indica "categoría normal";
+                // necesitamos saber si el valor está físicamente contenido por la regla.
                 if ($candidato->tipo_referencia === 'CATEGORIZADO') {
-                    $evaluacion = $candidato->evaluarValor($valorNumerico);
-                    if ($evaluacion['dentro_rango']) {
+                    $caeEnCategoria = false;
+
+                    if ($candidato->operador) {
+                        switch ($candidato->operador) {
+                            case '<':
+                                $caeEnCategoria = $candidato->valor_max !== null && $valorNumerico < (float) $candidato->valor_max;
+                                break;
+                            case '<=':
+                                $caeEnCategoria = $candidato->valor_max !== null && $valorNumerico <= (float) $candidato->valor_max;
+                                break;
+                            case '>':
+                                $caeEnCategoria = $candidato->valor_min !== null && $valorNumerico > (float) $candidato->valor_min;
+                                break;
+                            case '>=':
+                                $caeEnCategoria = $candidato->valor_min !== null && $valorNumerico >= (float) $candidato->valor_min;
+                                break;
+                            case '==':
+                                $caeEnCategoria = $candidato->valor_min !== null && $valorNumerico == (float) $candidato->valor_min;
+                                break;
+                        }
+                    } else {
+                        $caeEnCategoria = true;
+                        if ($candidato->valor_min !== null) {
+                            $caeEnCategoria = $caeEnCategoria && $valorNumerico >= (float) $candidato->valor_min;
+                        }
+                        if ($candidato->valor_max !== null) {
+                            $caeEnCategoria = $caeEnCategoria && $valorNumerico <= (float) $candidato->valor_max;
+                        }
+                    }
+
+                    if ($caeEnCategoria) {
                         return $candidato;
                     }
                 }
             }
+
+            // Si hay valor numérico pero ninguna regla lo contiene, no aplicar fallback:
+            // mejor mostrar sin alerta que fingir un rango incorrecto.
+            return null;
         }
 
-        // Si no encontró un rango específico donde caiga el valor, devolver el primero (fallback)
+        // Sin valor numérico (cualitativos/textos): mantener fallback al primer candidato
         return $candidatos->first();
     }
 

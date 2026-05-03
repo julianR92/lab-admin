@@ -271,19 +271,12 @@ class ExamenValorReferencia extends Model
             'categoria' => null,
         ];
 
-        // Comparar valor con el esperado
-        if ($this->valor_cualitativo && $valor !== $this->valor_cualitativo) {
+        // Solo el valor literal "REACTIVO" (case-insensitive, ignorando espacios) genera alerta.
+        // Los demás valores cualitativos (POSITIVO, NEGATIVO, AMARILLO, TURBIO, etc.) no activan
+        // formato rojo por decisión de negocio: el reporte debe destacar únicamente reactivos.
+        if (is_string($valor) && strtoupper(trim($valor)) === 'REACTIVO') {
             $resultado['dentro_rango'] = false;
-
-            // Determinar severidad según el valor esperado
-            $valorEsperadoLower = strtolower($this->valor_cualitativo);
-
-            if (str_contains($valorEsperadoLower, 'negativo') || str_contains($valorEsperadoLower, 'no reactivo')) {
-                // Si se esperaba negativo y es positivo, es crítico
-                $resultado['tipo_alerta'] = 'CRITICO';
-            } else {
-                $resultado['tipo_alerta'] = 'ALTO';
-            }
+            $resultado['tipo_alerta'] = 'ALTO';
         }
 
         return $resultado;
