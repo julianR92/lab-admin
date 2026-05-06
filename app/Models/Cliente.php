@@ -24,6 +24,7 @@ class Cliente extends Model
         'direccion',
         'ciudad',
         'eps',
+        'ips_id',
     ];
 
     protected function casts(): array
@@ -61,9 +62,13 @@ class Cliente extends Model
         });
     }
 
-    // Relación con servicios (la crearemos más adelante)
     public function servicios()
     {
         return $this->hasMany(Servicio::class);
+    }
+
+    public function ips()
+    {
+        return $this->belongsTo(Ips::class);
     }
 }

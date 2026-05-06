@@ -16,7 +16,7 @@ class ClienteController extends Controller
             return response()->json([]);
         }
 
-        $clientes = Cliente::where(function ($q) use ($query) {
+        $clientes = Cliente::with('ips')->where(function ($q) use ($query) {
             $q->where('nombre', 'like', "%{$query}%")
                 ->orWhere('apellido', 'like', "%{$query}%")
                 ->orWhere('documento', 'like', "%{$query}%");
@@ -25,15 +25,17 @@ class ClienteController extends Controller
             ->get()
             ->map(function ($cliente) {
                 return [
-                    'id' => $cliente->id,
-                    'nombre_completo' => $cliente->nombre_completo,
-                    'documento' => $cliente->documento,
-                    'tipo_documento' => $cliente->tipo_documento,
-                    'edad' => $cliente->edad,
-                    'genero' => $cliente->genero,
-                    'telefono' => $cliente->telefono,
-                    'email' => $cliente->email,
-                    'eps' => $cliente->eps,
+                    'id'               => $cliente->id,
+                    'nombre_completo'  => $cliente->nombre_completo,
+                    'documento'        => $cliente->documento,
+                    'tipo_documento'   => $cliente->tipo_documento,
+                    'edad'             => $cliente->edad,
+                    'genero'           => $cliente->genero,
+                    'telefono'         => $cliente->telefono,
+                    'email'            => $cliente->email,
+                    'eps'              => $cliente->eps,
+                    'ips_id'           => $cliente->ips_id,
+                    'ips_razon_social' => $cliente->ips?->razon_social,
                 ];
             });
 

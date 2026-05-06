@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreClienteRequest;
 use App\Http\Requests\UpdateClienteRequest;
 use App\Models\Cliente;
+use App\Models\Ips;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -45,7 +46,9 @@ class ClienteController extends Controller
 
     public function create(): View
     {
-        return view('clientes.create');
+        $ipsList = Ips::orderBy('razon_social')->get();
+
+        return view('clientes.create', compact('ipsList'));
     }
 
     public function store(StoreClienteRequest $request): RedirectResponse
@@ -71,7 +74,9 @@ class ClienteController extends Controller
 
     public function edit(Cliente $cliente): View
     {
-        return view('clientes.edit', compact('cliente'));
+        $ipsList = Ips::orderBy('razon_social')->get();
+
+        return view('clientes.edit', compact('cliente', 'ipsList'));
     }
 
     public function update(UpdateClienteRequest $request, Cliente $cliente): RedirectResponse

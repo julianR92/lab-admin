@@ -164,7 +164,7 @@ class ServicioController extends Controller
     public function show(Servicio $servicio)
     {
         $servicio->load([
-            'cliente',
+            'cliente.ips',
             'serviciosExamen.examen.categoria',
             'serviciosExamen.profesional',
             'serviciosExamen.resultados',

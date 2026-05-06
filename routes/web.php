@@ -40,6 +40,9 @@ Route::middleware('auth')->group(function () {
     // Rutas de Profesionales
     Route::resource('profesionales', \App\Http\Controllers\ProfesionalController::class);
 
+    // Rutas de IPS
+    Route::resource('ips', \App\Http\Controllers\IpsController::class);
+
     // Rutas de Exámenes
     Route::resource('examenes', \App\Http\Controllers\ExamenController::class);
 

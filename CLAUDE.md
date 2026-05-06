@@ -46,12 +46,12 @@ vendor/bin/pest                      # Ejecutar tests
 
 ---
 
-## Modelos y Base de Datos (12 modelos)
+## Modelos y Base de Datos (13 modelos)
 
 ### Relaciones Principales
 
 ```
-Cliente --hasMany--> Servicio --hasMany--> ServicioExamen --hasMany--> ResultadoExamen
+Ips --hasMany--> Cliente --hasMany--> Servicio --hasMany--> ServicioExamen --hasMany--> ResultadoExamen
                                               |                            |
                                               |--hasMany--> ResultadoAdjunto
                                               |--belongsTo--> Examen
@@ -70,7 +70,8 @@ User (autenticacion y auditoria)
 | Modelo | Tabla | Descripcion |
 |--------|-------|-------------|
 | User | users | Autenticacion y auditoria |
-| Cliente | clientes | Pacientes (nombre, documento, genero, fecha_nacimiento, eps) |
+| Cliente | clientes | Pacientes (nombre, documento, genero, fecha_nacimiento, eps, ips_id FK nullable) |
+| Ips | ips | Instituciones Prestadoras de Salud (razon_social, nit, correo_electronico, logo) |
 | Empresa | empresa | Datos del laboratorio (nit, razon_social, logo, representante_*) - singleton |
 | Profesional | profesionales | Bacteriologos/profesionales (firma_digital, registro_profesional) |
 | CategoriaExamen | categoria_examen | Agrupacion de examenes (Hematologia, Quimica, etc.) |
@@ -380,9 +381,10 @@ Constantes en `ResultadoExamen`: `ALERTA_NORMAL`, `ALERTA_BAJO`, `ALERTA_ALTO`, 
 
 ### 3. Clientes (Pacientes)
 **Controlador:** `ClienteController` + `Api/ClienteController`
-CRUD de pacientes. Campos: nombre, apellido, tipo_documento (CC/TI/CE/PA/RC), documento (unique), genero (M/F/O), fecha_nacimiento, telefono, email, ciudad, eps.
+CRUD de pacientes. Campos: nombre, apellido, tipo_documento (CC/TI/CE/PA/RC), documento (unique), genero (M/F/O), fecha_nacimiento, telefono, email, ciudad, eps, ips_id (FK nullable a tabla `ips`).
 **Scopes:** `buscar()`, `porDocumento()`. **Accessors:** `nombreCompleto`, `edad`.
-**Rutas:** `resource clientes`, `GET /api/clientes/buscar` (AJAX para selects).
+**Relacion:** `belongsTo(Ips::class)` — el cliente puede pertenecer a una IPS.
+**Rutas:** `resource clientes`, `GET /api/clientes/buscar` (AJAX para selects, incluye `ips_id` e `ips_razon_social`).
 
 ### 4. Categorias de Examen
 **Controlador:** `CategoriaExamenController`
@@ -463,7 +465,31 @@ Permite subir, descargar y eliminar el PDF del laboratorio externo para examenes
 - `GET /servicios/{id}/resultados-pdf`
 - `GET /servicios/{id}/examen/{servicioExamenId}/resultados-pdf`
 
-### 13. Perfil de Usuario
+### 13. IPS (Instituciones Prestadoras de Salud)
+**Controlador:** `IpsController`
+CRUD de IPS. Campos: razon_social (requerido), nit (unique, requerido), correo_electronico (requerido), logo (imagen, max 2MB en `storage/public/ips/`).
+**Relacion:** `hasMany(Cliente::class)` — una IPS puede tener muchos pacientes.
+No se puede eliminar si tiene clientes asociados.
+**En PDF de resultados:** si el cliente tiene IPS, aparece fila "Empresa / IPS" + correo en la tabla del paciente, y el logo de la IPS se muestra a la derecha del encabezado (en el spacer-cell).
+**En servicios/show:** se muestra la razon_social de la IPS en la informacion del servicio.
+**Rutas:** `resource ips`. Logo almacenado en `storage/public/ips/`.
+
+**SQL para crear la tabla (no usar migraciones):**
+```sql
+CREATE TABLE ips (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    razon_social VARCHAR(255) NOT NULL,
+    nit VARCHAR(50) NOT NULL UNIQUE,
+    correo_electronico VARCHAR(150) NOT NULL,
+    logo VARCHAR(500) NULL,
+    created_at TIMESTAMP NULL,
+    updated_at TIMESTAMP NULL
+);
+ALTER TABLE clientes ADD COLUMN ips_id BIGINT UNSIGNED NULL AFTER eps;
+ALTER TABLE clientes ADD CONSTRAINT fk_clientes_ips FOREIGN KEY (ips_id) REFERENCES ips(id) ON DELETE SET NULL;
+```
+
+### 14. Perfil de Usuario
 **Controlador:** `PerfilController`
 Edicion de nombre y contrasena. Requiere contrasena actual para cambiar.
 
@@ -492,6 +518,7 @@ storage/app/public/
   logos/                  -> Logo de la empresa
   firmas/                 -> Firmas digitales de profesionales
   firmas-representante/   -> Firma del representante legal
+  ips/                    -> Logos de IPS
   examenes/
     {numeroOrden}/        -> Imagenes adjuntas por orden + remision_{timestamp}.pdf (PDF externo de examen remitido)
 ```
@@ -506,11 +533,12 @@ Acceso publico: symlink `public/storage/ -> storage/app/public/` (`php artisan s
 app/
   Http/
     Controllers/
-      Api/ClienteController.php          # Busqueda AJAX de clientes
+      Api/ClienteController.php          # Busqueda AJAX de clientes (incluye ips_id e ips_razon_social)
       Auth/LoginController.php           # Autenticacion
       CategoriaExamenController.php      # CRUD categorias
       ClienteController.php              # CRUD pacientes
       EmpresaController.php              # Config laboratorio
+      IpsController.php                  # CRUD instituciones prestadoras de salud
       ExamenController.php               # CRUD examenes + getTiposResultado()
       ExamenParametroController.php      # CRUD parametros + getTiposDato()
       ExamenValorReferenciaController.php# CRUD referencia + getTiposReferencia()
@@ -521,13 +549,13 @@ app/
       ResultadoPdfController.php         # Generacion PDF (excluye remitidos)
       RemisionPdfController.php          # PDF externo de examenes remitidos
       ServicioController.php             # Ordenes de laboratorio
-    Requests/                            # 17 form requests (incluye StoreRemisionPdfRequest)
+    Requests/                            # 19 form requests (incluye StoreIpsRequest, UpdateIpsRequest, StoreRemisionPdfRequest)
   Models/                                # 12 modelos Eloquent
 
 resources/views/
   layouts/{app,auth}.blade.php
   dashboard.blade.php
-  clientes/ categorias-examen/ examenes/ profesionales/
+  clientes/ categorias-examen/ examenes/ profesionales/ ips/
   servicios/{index,create,edit,show,orden-pdf,resultado-pdf}.blade.php
   resultados/
     {create,show}.blade.php

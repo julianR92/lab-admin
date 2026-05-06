@@ -27,7 +27,8 @@ class UpdateClienteRequest extends FormRequest
             'email' => ['nullable', 'email', 'max:150'],
             'direccion' => ['nullable', 'string', 'max:255'],
             'ciudad' => ['nullable', 'string', 'max:100'],
-            'eps' => ['nullable', 'string', 'max:150'],
+            'eps'    => ['nullable', 'string', 'max:150'],
+            'ips_id' => ['nullable', 'exists:ips,id'],
         ];
     }
 
@@ -53,7 +54,8 @@ class UpdateClienteRequest extends FormRequest
             'email.max' => 'El correo electrónico no puede tener más de 150 caracteres.',
             'direccion.max' => 'La dirección no puede tener más de 255 caracteres.',
             'ciudad.max' => 'La ciudad no puede tener más de 100 caracteres.',
-            'eps.max' => 'La EPS no puede tener más de 150 caracteres.',
+            'eps.max'       => 'La EPS no puede tener más de 150 caracteres.',
+            'ips_id.exists' => 'La IPS seleccionada no es válida.',
         ];
     }
 }

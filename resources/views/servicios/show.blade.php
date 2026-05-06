@@ -96,6 +96,12 @@
                             <th>EPS:</th>
                             <td>{{ $servicio->cliente->eps ?? 'No registrado' }}</td>
                         </tr>
+                        @if($servicio->cliente->ips)
+                        <tr>
+                            <th>IPS / Empresa:</th>
+                            <td>{{ $servicio->cliente->ips->razon_social }}</td>
+                        </tr>
+                        @endif
                         @if ($servicio->observaciones)
                         <tr>
                             <th>Observaciones:</th>

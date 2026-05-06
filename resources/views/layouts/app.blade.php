@@ -153,6 +153,11 @@
                             </a>
                         </li>
                         <li class="nav-item">
+                            <a class="nav-link" href="{{ route('ips.index') }}">
+                                <i class="fas fa-hospital me-1"></i>IPS
+                            </a>
+                        </li>
+                        <li class="nav-item">
                             <a class="nav-link" href="{{ route('examenes.index') }}">
                                 <i class="fas fa-flask me-1"></i>Exámenes
                             </a>

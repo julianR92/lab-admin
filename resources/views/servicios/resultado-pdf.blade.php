@@ -518,7 +518,15 @@
                     </div>
                 </td>
                 @if($empresa && $empresa->logo)
-                <td class="spacer-cell"></td>
+                <td class="spacer-cell" style="text-align:center; vertical-align:middle;">
+                    @if($servicio->cliente->ips && $servicio->cliente->ips->logo)
+                        @php $rutaLogoIps = storage_path('app/public/' . $servicio->cliente->ips->logo); @endphp
+                        @if(file_exists($rutaLogoIps))
+                            <img src="{{ $rutaLogoIps }}" alt="Logo IPS" style="max-width:145px; max-height:70px; object-fit:contain;">
+                            {{-- <div style="font-size:8pt; color:#555; margin-top:2px;">{{ $servicio->cliente->ips->razon_social }}</div> --}}
+                        @endif
+                    @endif
+                </td>
                 @endif
             </tr>
         </table>
@@ -560,6 +568,14 @@
             <td class="label">Ciudad:</td>
             <td class="value" style="text-transform: capitalize;">{{ ucwords(strtolower($servicio->cliente->ciudad ?? 'No registrado')) }}</td>
         </tr>
+        @if($servicio->cliente->ips)
+        <tr>
+            <td class="label">Empresa / IPS:</td>
+            <td class="value">{{ $servicio->cliente->ips->razon_social }}</td>
+            <td class="label">Correo IPS:</td>
+            <td class="value">{{ $servicio->cliente->ips->correo_electronico }}</td>
+        </tr>
+        @endif
     </table>
 
     <!-- ============ TÍTULO RESULTADOS ============ -->

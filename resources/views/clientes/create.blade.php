@@ -162,6 +162,24 @@
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
                             </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label for="ips_id" class="form-label">
+                                    <i class="fas fa-building me-1"></i>IPS / Empresa
+                                </label>
+                                <select class="form-select @error('ips_id') is-invalid @enderror"
+                                        id="ips_id" name="ips_id">
+                                    <option value="">-- Sin IPS --</option>
+                                    @foreach($ipsList as $ipsItem)
+                                        <option value="{{ $ipsItem->id }}" {{ old('ips_id') == $ipsItem->id ? 'selected' : '' }}>
+                                            {{ $ipsItem->razon_social }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                                @error('ips_id')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
                         </div>
 
                         <div class="row mt-4">

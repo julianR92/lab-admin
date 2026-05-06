@@ -13,7 +13,7 @@ class ResultadoPdfController extends Controller
     {
         // Cargar servicio con todas sus relaciones
         $servicio = Servicio::with([
-            'cliente',
+            'cliente.ips',
             'serviciosExamen' => function ($query) {
                 $query->whereIn('estado', ['VALIDADO', 'ENTREGADO'])
                     ->where('es_remitido', false)
@@ -89,7 +89,7 @@ class ResultadoPdfController extends Controller
     {
         // Cargar servicio con todas sus relaciones y filtrar por el examen específico
         $servicio = Servicio::with([
-            'cliente',
+            'cliente.ips',
             'serviciosExamen' => function ($query) use ($servicioExamenId) {
                 $query->where('id', $servicioExamenId)
                     ->whereIn('estado', ['VALIDADO', 'ENTREGADO'])
