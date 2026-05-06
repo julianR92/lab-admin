@@ -366,9 +366,13 @@ class ExamenValorReferencia extends Model
 
         // Prioridad 3: Rango de edad
         if ($this->edad_min !== null || $this->edad_max !== null) {
-            $edadMin = $this->edad_min ?? 0;
-            $edadMax = $this->edad_max ? $this->edad_max.' años' : '+ años';
-            $partes[] = "({$edadMin} - {$edadMax})";
+            if ($this->edad_max === null) {
+                $partes[] = "({$this->edad_min} en adelante)";
+            } elseif ($this->edad_min === null) {
+                $partes[] = "(0 - {$this->edad_max} años)";
+            } else {
+                $partes[] = "({$this->edad_min} - {$this->edad_max} años)";
+            }
         }
 
         return ! empty($partes) ? implode(' ', $partes) : null;
