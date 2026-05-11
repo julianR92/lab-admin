@@ -11,7 +11,10 @@ use App\Models\Servicio;
 use App\Models\ServicioExamen;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 
 class ServicioController extends Controller
 {
@@ -290,21 +293,44 @@ class ServicioController extends Controller
 
     public function destroy(Servicio $servicio)
     {
-        // Verificar que todos los exÃ¡menes estÃ©n pendientes
-        $tieneExamenesEnProceso = $servicio->serviciosExamen()
-            ->where('estado', '!=', 'PENDIENTE')
-            ->exists();
-
-        if ($tieneExamenesEnProceso) {
-            return back()->with('error', 'No se puede eliminar el servicio porque tiene exÃ¡menes en proceso.');
-        }
-
         try {
+            DB::beginTransaction();
+
+            foreach ($servicio->serviciosExamen()->with('adjuntos')->get() as $servicioExamen) {
+                if ($servicioExamen->pdf_remision && Storage::disk('public')->exists($servicioExamen->pdf_remision)) {
+                    Storage::disk('public')->delete($servicioExamen->pdf_remision);
+                }
+
+                // Eliminar adjuntos uno a uno para disparar el evento deleting() que borra el archivo físico
+                foreach ($servicioExamen->adjuntos as $adjunto) {
+                    $adjunto->delete();
+                }
+
+                $servicioExamen->resultados()->delete();
+                $servicioExamen->delete();
+            }
+
+            $numeroOrden = $servicio->numero_orden;
             $servicio->delete();
 
+            DB::commit();
+
+            Log::info('Servicio eliminado', [
+                'numero_orden' => $numeroOrden,
+                'usuario_id' => Auth::id(),
+            ]);
+
             return redirect()->route('servicios.index')
-                ->with('success', 'Servicio eliminado exitosamente.');
+                ->with('success', "Servicio {$numeroOrden} eliminado exitosamente.");
+
         } catch (\Exception $e) {
+            DB::rollBack();
+
+            Log::error('Error al eliminar servicio', [
+                'servicio_id' => $servicio->id,
+                'error' => $e->getMessage(),
+            ]);
+
             return back()->with('error', 'Error al eliminar el servicio: '.$e->getMessage());
         }
     }

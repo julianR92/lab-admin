@@ -128,7 +128,11 @@
             </div>
             <div class="modal-body">
                 <p>¿Está seguro de que desea eliminar este servicio?</p>
-                <p class="text-danger"><small>Se eliminarán todos los exámenes asociados que estén pendientes.</small></p>
+                <p class="text-danger fw-semibold">
+                    <i class="fas fa-exclamation-triangle me-1"></i>
+                    Esta acción es irreversible. Se eliminarán permanentemente todos los resultados,
+                    imágenes adjuntas y PDFs asociados a esta orden.
+                </p>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
