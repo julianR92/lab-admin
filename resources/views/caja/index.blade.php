@@ -71,10 +71,17 @@
             </h1>
             <p class="text-muted mb-0">Resumen financiero del laboratorio</p>
         </div>
-        <span class="periodo-badge">
-            <i class="fas fa-calendar-alt me-1"></i>
-            {{ \Carbon\Carbon::parse($fechaDesde)->format('d/m/Y') }} — {{ \Carbon\Carbon::parse($fechaHasta)->format('d/m/Y') }}
-        </span>
+        <div class="d-flex gap-2 align-items-center flex-wrap">
+            <span class="periodo-badge">
+                <i class="fas fa-calendar-alt me-1"></i>
+                {{ \Carbon\Carbon::parse($fechaDesde)->format('d/m/Y') }} — {{ \Carbon\Carbon::parse($fechaHasta)->format('d/m/Y') }}
+            </span>
+            @if($ipsId)
+                <span class="periodo-badge">
+                    <i class="fas fa-hospital me-1"></i>{{ $ipsList->find($ipsId)?->razon_social }}
+                </span>
+            @endif
+        </div>
     </div>
 
     {{-- Filtros de fechas --}}
@@ -89,6 +96,17 @@
                     <div class="col-md-3">
                         <label class="form-label fw-semibold small text-uppercase text-muted">Fecha hasta</label>
                         <input type="date" name="fecha_hasta" class="form-control" value="{{ $fechaHasta }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold small text-uppercase text-muted">IPS</label>
+                        <select name="ips_id" class="form-select">
+                            <option value="">— Todas las IPS —</option>
+                            @foreach($ipsList as $ips)
+                                <option value="{{ $ips->id }}" @selected($ipsId == $ips->id)>
+                                    {{ $ips->razon_social }}
+                                </option>
+                            @endforeach
+                        </select>
                     </div>
                     <div class="col-md-auto">
                         <button type="submit" class="btn btn-primary">
@@ -231,6 +249,7 @@
                             <th>N° Orden</th>
                             <th>Fecha</th>
                             <th>Cliente</th>
+                            <th>IPS</th>
                             <th class="text-center">Exámenes</th>
                             <th class="text-center">Remitidos</th>
                             <th class="text-end">Facturado</th>
@@ -242,7 +261,7 @@
                     <tbody></tbody>
                     <tfoot>
                         <tr class="fw-bold bg-light">
-                            <td colspan="3">Totales del período</td>
+                            <td colspan="4">Totales del período</td>
                             <td id="pie-examenes" class="text-center"></td>
                             <td id="pie-remitidos" class="text-center"></td>
                             <td id="pie-facturado" class="text-end"></td>
@@ -281,6 +300,13 @@ $(document).ready(function () {
             },
             { data: 'fecha' },
             { data: 'cliente_nombre' },
+            {
+                data: 'ips_nombre',
+                render: function (data) {
+                    if (!data || data === '—') return '<span class="text-muted small">—</span>';
+                    return '<span class="badge bg-light text-dark border small">' + data + '</span>';
+                }
+            },
             {
                 data: 'total_examenes',
                 className: 'text-center',
@@ -328,11 +354,11 @@ $(document).ready(function () {
         footerCallback: function (row, data, start, end, display) {
             var api = this.api();
 
-            var totalExamenes   = api.column(3, { page: 'all' }).data().reduce(function (a, b) { return a + Number($(b).text() || b); }, 0);
-            var totalRemitidos  = api.column(4, { page: 'all' }).data().reduce(function (a, b) { var n = Number($(b).text() || 0); return a + (isNaN(n) ? 0 : n); }, 0);
-            var totalFacturado  = api.column(5, { search: 'applied' }).data().reduce(function (a, b) { return a + Number($(b).text().replace(/[^0-9]/g, '') || b); }, 0);
-            var totalCosto      = api.column(6, { search: 'applied' }).data().reduce(function (a, b) { return a + Number($(b).text().replace(/[^0-9]/g, '') || b); }, 0);
-            var totalGanancia   = api.column(7, { search: 'applied' }).data().reduce(function (a, b) { return a + Number($(b).text().replace(/[^0-9]/g, '') || b); }, 0);
+            var totalExamenes   = api.column(4, { page: 'all' }).data().reduce(function (a, b) { return a + Number($(b).text() || b); }, 0);
+            var totalRemitidos  = api.column(5, { page: 'all' }).data().reduce(function (a, b) { var n = Number($(b).text() || 0); return a + (isNaN(n) ? 0 : n); }, 0);
+            var totalFacturado  = api.column(6, { search: 'applied' }).data().reduce(function (a, b) { return a + Number($(b).text().replace(/[^0-9]/g, '') || b); }, 0);
+            var totalCosto      = api.column(7, { search: 'applied' }).data().reduce(function (a, b) { return a + Number($(b).text().replace(/[^0-9]/g, '') || b); }, 0);
+            var totalGanancia   = api.column(8, { search: 'applied' }).data().reduce(function (a, b) { return a + Number($(b).text().replace(/[^0-9]/g, '') || b); }, 0);
 
             // Usamos los valores de raw data para mayor precisión
             var rawFacturado = 0; var rawCosto = 0; var rawGanancia = 0;

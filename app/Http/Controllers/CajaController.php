@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Cliente;
+use App\Models\Ips;
 use App\Models\Servicio;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -19,9 +21,16 @@ class CajaController extends Controller
             ? $request->fecha_hasta
             : now()->toDateString();
 
-        $query = Servicio::with(['cliente', 'serviciosExamen.examen'])
+        $ipsId = $request->input('ips_id');
+
+        $query = Servicio::with(['cliente.ips', 'serviciosExamen.examen'])
             ->whereDate('fecha', '>=', $fechaDesde)
             ->whereDate('fecha', '<=', $fechaHasta);
+
+        if ($ipsId) {
+            $clienteIds = Cliente::where('ips_id', $ipsId)->pluck('id');
+            $query->whereIn('cliente_id', $clienteIds);
+        }
 
         if ($request->ajax()) {
             $servicios = $query->latest('fecha')->get();
@@ -45,6 +54,7 @@ class CajaController extends Controller
                         'servicio_id' => $servicio->id,
                         'fecha' => $servicio->fecha->format('d/m/Y'),
                         'cliente_nombre' => $servicio->cliente->nombre_completo,
+                        'ips_nombre' => $servicio->cliente->ips?->razon_social ?? '—',
                         'total_examenes' => $totalExamenes,
                         'total_remitidos' => $totalRemitidos,
                         'valor_facturado' => $servicio->valor_total,
@@ -73,6 +83,8 @@ class CajaController extends Controller
         });
         $gananciaNeta = $valorFacturado - $costoRemisiones;
 
+        $ipsList = Ips::orderBy('razon_social')->get();
+
         return view('caja.index', compact(
             'fechaDesde',
             'fechaHasta',
@@ -84,6 +96,8 @@ class CajaController extends Controller
             'saldoPendiente',
             'costoRemisiones',
             'gananciaNeta',
+            'ipsList',
+            'ipsId',
         ));
     }
 }
