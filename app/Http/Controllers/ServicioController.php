@@ -6,6 +6,7 @@ use App\Http\Requests\ActualizarFechaTomaMuestraRequest;
 use App\Http\Requests\StoreServicioRequest;
 use App\Http\Requests\UpdateServicioRequest;
 use App\Models\Examen;
+use App\Models\LaboratorioExamen;
 use App\Models\Profesional;
 use App\Models\Servicio;
 use App\Models\ServicioExamen;
@@ -174,7 +175,7 @@ class ServicioController extends Controller
         ]);
 
         $profesionales = Profesional::where('status', 1)
-            //->where('profesion', 'BacteriÃ³logo')
+            // ->where('profesion', 'BacteriÃ³logo')
             ->orderBy('nombre')
             ->get();
 
@@ -433,6 +434,30 @@ class ServicioController extends Controller
         $servicioExamen->save();
 
         return back()->with('success', 'Estado actualizado exitosamente.');
+    }
+
+    public function asignarLaboratorio(Request $request, ServicioExamen $servicioExamen)
+    {
+        abort_if(! $servicioExamen->es_remitido, 403);
+        abort_if($servicioExamen->estado === 'ENTREGADO', 403);
+
+        $request->validate([
+            'laboratorio_id' => ['required', 'exists:laboratorios,id'],
+        ], [
+            'laboratorio_id.required' => 'Debe seleccionar un laboratorio.',
+            'laboratorio_id.exists' => 'El laboratorio seleccionado no existe.',
+        ]);
+
+        $le = LaboratorioExamen::where('laboratorio_id', $request->laboratorio_id)
+            ->where('examen_id', $servicioExamen->examen_id)
+            ->firstOrFail();
+
+        $servicioExamen->update([
+            'laboratorio_id' => $le->laboratorio_id,
+            'costo_remision_snapshot' => $le->valor_remision,
+        ]);
+
+        return back()->with('success', 'Laboratorio asignado correctamente.');
     }
 
     private function generarNumeroOrden(): string

@@ -321,8 +321,9 @@
 
                     @if($examen->valor_remision)
                         <div class="mb-3">
-                            <label class="fw-bold text-muted small">VALOR REMISIÓN</label>
+                            <label class="fw-bold text-muted small">VALOR REMISIÓN BASE</label>
                             <p class="mb-0 h5 text-info">${{ number_format($examen->valor_remision, 0, ',', '.') }}</p>
+                            <small class="text-muted">Precio de respaldo (sin laboratorio asignado)</small>
                         </div>
                     @endif
 

@@ -169,7 +169,10 @@
                         </div>
 
                         <div class="mb-3">
-                            <label for="valor_remision" class="form-label">Valor Remisión</label>
+                            <label for="valor_remision" class="form-label">
+                                Valor Remisión Base
+                                <span class="text-muted fw-normal small">(referencia)</span>
+                            </label>
                             <div class="input-group">
                                 <span class="input-group-text">$</span>
                                 <input type="text"
@@ -180,6 +183,11 @@
                                 @error('valor_remision')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
+                            </div>
+                            <div class="form-text">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Precio de respaldo. El costo real se define por laboratorio en
+                                <a href="{{ route('laboratorios.index') }}" target="_blank">Laboratorios</a>.
                             </div>
                             <small class="text-muted">Valor si se remite a otro laboratorio</small>
                         </div>

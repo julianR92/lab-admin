@@ -43,6 +43,11 @@ Route::middleware('auth')->group(function () {
     // Rutas de IPS
     Route::resource('ips', \App\Http\Controllers\IpsController::class);
 
+    // Rutas de Laboratorios de Remisión
+    Route::resource('laboratorios', \App\Http\Controllers\LaboratorioController::class);
+    Route::post('laboratorios/{laboratorio}/examenes', [\App\Http\Controllers\LaboratorioController::class, 'storeExamen'])->name('laboratorios.examenes.store');
+    Route::delete('laboratorios/{laboratorio}/examenes/{examen}', [\App\Http\Controllers\LaboratorioController::class, 'destroyExamen'])->name('laboratorios.examenes.destroy');
+
     // Rutas de Exámenes
     Route::resource('examenes', \App\Http\Controllers\ExamenController::class);
 
@@ -72,6 +77,7 @@ Route::middleware('auth')->group(function () {
     Route::post('servicio-examen/{servicioExamen}/profesional', [\App\Http\Controllers\ServicioController::class, 'asignarProfesional'])->name('servicios.asignar-profesional');
     Route::post('servicio-examen/{servicioExamen}/fecha-toma-muestra', [\App\Http\Controllers\ServicioController::class, 'actualizarFechaTomaMuestra'])->name('servicios.actualizar-fecha-toma');
     Route::post('servicio-examen/{servicioExamen}/estado', [\App\Http\Controllers\ServicioController::class, 'cambiarEstado'])->name('servicios.cambiar-estado');
+    Route::post('servicio-examen/{servicioExamen}/laboratorio', [\App\Http\Controllers\ServicioController::class, 'asignarLaboratorio'])->name('servicios.asignar-laboratorio');
 
     // Rutas de Resultados de Exámenes
     Route::get('servicio-examen/{servicioExamen}/resultados/create', [\App\Http\Controllers\ResultadoExamenController::class, 'create'])->name('resultados.create');
@@ -102,4 +108,5 @@ Route::middleware('auth')->group(function () {
 // Rutas API
 Route::prefix('api')->group(function () {
     Route::get('/clientes/buscar', [\App\Http\Controllers\Api\ClienteController::class, 'buscar'])->name('api.clientes.buscar');
+    Route::get('/laboratorios/por-examen/{examen}', [\App\Http\Controllers\Api\LaboratorioController::class, 'porExamen'])->name('api.laboratorios.por-examen');
 });

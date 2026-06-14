@@ -263,6 +263,28 @@
                                         @if ($servicioExamen->es_remitido)
                                             {{-- Examen remitido: sin captura ni validación --}}
                                             @if ($servicioExamen->estado !== 'ENTREGADO')
+                                                {{-- Asignar laboratorio de remisión --}}
+                                                @if ($servicioExamen->laboratorio)
+                                                    <span class="badge bg-secondary me-1" title="Laboratorio asignado">
+                                                        <i class="fas fa-flask me-1"></i>{{ $servicioExamen->laboratorio->nombre }}
+                                                        — ${{ number_format($servicioExamen->costo_remision_snapshot, 0, ',', '.') }}
+                                                    </span>
+                                                    <button type="button"
+                                                            class="btn btn-sm btn-outline-secondary btn-asignar-lab me-1"
+                                                            data-se="{{ $servicioExamen->id }}"
+                                                            data-examen="{{ $servicioExamen->examen_id }}"
+                                                            title="Cambiar laboratorio">
+                                                        <i class="fas fa-pencil-alt"></i>
+                                                    </button>
+                                                @else
+                                                    <button type="button"
+                                                            class="btn btn-sm btn-outline-warning btn-asignar-lab me-1"
+                                                            data-se="{{ $servicioExamen->id }}"
+                                                            data-examen="{{ $servicioExamen->examen_id }}"
+                                                            title="Asignar laboratorio">
+                                                        <i class="fas fa-hospital me-1"></i> Lab
+                                                    </button>
+                                                @endif
                                                 @if ($servicioExamen->pdf_remision)
                                                     <a href="{{ route('remision.download', $servicioExamen) }}"
                                                        class="btn btn-danger" title="Descargar PDF remisión" target="_blank">
@@ -408,6 +430,32 @@
     </div>
 </div>
 
+<!-- Modal Laboratorio de Remisión -->
+<div class="modal fade" id="modalLaboratorio" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <div class="modal-header py-2">
+                <h6 class="modal-title"><i class="fas fa-hospital me-1"></i>Laboratorio de Remisión</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" id="formLaboratorio">
+                @csrf
+                <div class="modal-body">
+                    <label class="form-label small fw-semibold">Laboratorio</label>
+                    <select name="laboratorio_id" class="form-select form-select-sm" id="selectLaboratorio" required></select>
+                    <p class="text-muted small mt-2 mb-0" id="lblPrecioRemision"></p>
+                </div>
+                <div class="modal-footer py-2">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary btn-sm">
+                        <i class="fas fa-save me-1"></i>Guardar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <!-- Modal Confirmar Eliminación -->
 <div class="modal fade" id="deleteModal" tabindex="-1">
     <div class="modal-dialog">
@@ -442,5 +490,44 @@
 function confirmDelete() {
     new bootstrap.Modal(document.getElementById('deleteModal')).show();
 }
+
+// Laboratorio de remisión
+document.querySelectorAll('.btn-asignar-lab').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+        var seId = this.dataset.se;
+        var examenId = this.dataset.examen;
+        var form = document.getElementById('formLaboratorio');
+        var select = document.getElementById('selectLaboratorio');
+        var lblPrecio = document.getElementById('lblPrecioRemision');
+
+        form.action = '/servicio-examen/' + seId + '/laboratorio';
+        select.innerHTML = '<option value="">Cargando...</option>';
+        lblPrecio.textContent = '';
+
+        fetch('/api/laboratorios/por-examen/' + examenId)
+            .then(function(r) { return r.json(); })
+            .then(function(labs) {
+                if (labs.length === 0) {
+                    select.innerHTML = '<option value="">Sin laboratorios configurados para este examen</option>';
+                } else {
+                    select.innerHTML = labs.map(function(l) {
+                        return '<option value="' + l.id + '" data-precio="' + l.valor_remision + '">' + l.nombre + '</option>';
+                    }).join('');
+                    select.dispatchEvent(new Event('change'));
+                }
+            });
+
+        new bootstrap.Modal(document.getElementById('modalLaboratorio')).show();
+    });
+});
+
+document.getElementById('selectLaboratorio').addEventListener('change', function() {
+    var opt = this.options[this.selectedIndex];
+    var precio = opt ? opt.dataset.precio : null;
+    var lbl = document.getElementById('lblPrecioRemision');
+    lbl.textContent = precio !== undefined && precio !== null
+        ? 'Costo remisión: $' + Number(precio).toLocaleString('es-CO')
+        : '';
+});
 </script>
 @endpush

@@ -105,6 +105,19 @@
                 </div>
             </a>
         </div>
+        <div class="col-md-3 mb-3">
+            <a href="{{ route('laboratorios.index') }}" class="text-decoration-none">
+                <div class="card border-0 shadow-sm h-100 hover-card" style="transition: all 0.3s ease;">
+                    <div class="card-body text-center py-4">
+                        <div class="mb-3">
+                            <i class="fas fa-building fa-3x text-secondary"></i>
+                        </div>
+                        <h6 class="mb-1">Laboratorios</h6>
+                        <p class="text-muted small mb-0">Laboratorios de remisión externos</p>
+                    </div>
+                </div>
+            </a>
+        </div>
     </div>
 
     <!-- Módulo de Servicios -->

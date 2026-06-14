@@ -158,6 +158,11 @@
                             </a>
                         </li>
                         <li class="nav-item">
+                            <a class="nav-link" href="{{ route('laboratorios.index') }}">
+                                <i class="fas fa-building me-1"></i>Laboratorios
+                            </a>
+                        </li>
+                        <li class="nav-item">
                             <a class="nav-link" href="{{ route('examenes.index') }}">
                                 <i class="fas fa-flask me-1"></i>Exámenes
                             </a>

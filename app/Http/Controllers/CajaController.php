@@ -23,7 +23,7 @@ class CajaController extends Controller
 
         $ipsId = $request->input('ips_id');
 
-        $query = Servicio::with(['cliente.ips', 'serviciosExamen.examen'])
+        $query = Servicio::with(['cliente.ips', 'serviciosExamen.examen', 'serviciosExamen.laboratorio'])
             ->whereDate('fecha', '>=', $fechaDesde)
             ->whereDate('fecha', '<=', $fechaHasta);
 
@@ -40,7 +40,7 @@ class CajaController extends Controller
                     $totalExamenes = $servicio->serviciosExamen->count();
                     $remitidos = $servicio->serviciosExamen->where('es_remitido', true);
                     $totalRemitidos = $remitidos->count();
-                    $costoRemision = $remitidos->sum(fn ($se) => $se->examen?->valor_remision ?? 0);
+                    $costoRemision = $remitidos->sum(fn ($se) => $se->costo_remision_snapshot ?? ($se->examen?->valor_remision ?? 0));
                     $gananciaNeta = $servicio->valor_total - $costoRemision;
 
                     $estadoPagoBadge = match ($servicio->estado_pago) {
@@ -79,7 +79,7 @@ class CajaController extends Controller
         $costoRemisiones = $servicios->sum(function (Servicio $servicio) {
             return $servicio->serviciosExamen
                 ->where('es_remitido', true)
-                ->sum(fn ($se) => $se->examen?->valor_remision ?? 0);
+                ->sum(fn ($se) => $se->costo_remision_snapshot ?? ($se->examen?->valor_remision ?? 0));
         });
         $gananciaNeta = $valorFacturado - $costoRemisiones;
 

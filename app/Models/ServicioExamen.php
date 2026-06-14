@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class ServicioExamen extends Model
@@ -17,6 +18,8 @@ class ServicioExamen extends Model
         'examen_id',
         'es_remitido',
         'pdf_remision',
+        'laboratorio_id',
+        'costo_remision_snapshot',
         'profesional_id',
         'estado',
         'fecha_toma_muestra',
@@ -30,6 +33,7 @@ class ServicioExamen extends Model
     {
         return [
             'es_remitido' => 'boolean',
+            'costo_remision_snapshot' => 'decimal:2',
             'fecha_toma_muestra' => 'datetime',
             'fecha_resultado' => 'datetime',
             'fecha_validacion' => 'datetime',
@@ -51,6 +55,11 @@ class ServicioExamen extends Model
     public function profesional()
     {
         return $this->belongsTo(Profesional::class, 'profesional_id');
+    }
+
+    public function laboratorio(): BelongsTo
+    {
+        return $this->belongsTo(Laboratorio::class, 'laboratorio_id');
     }
 
     public function resultados()
