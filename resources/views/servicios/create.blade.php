@@ -90,7 +90,7 @@
                                 @foreach ($examenes as $categoria => $examenesCategoria)
                                     <optgroup label="{{ $categoria }}">
                                         @foreach ($examenesCategoria as $examen)
-                                            <option value="{{ $examen->id }}" data-precio="{{ $examen->valor_total }}" data-precio-remision="{{ $examen->valor_remision ?? 0 }}" data-nombre="{{ $examen->codigo }} - {{ $examen->nombre }}">
+                                            <option value="{{ $examen->id }}" data-precio="{{ $examen->valor_total }}" data-nombre="{{ $examen->codigo }} - {{ $examen->nombre }}">
                                                 {{ $examen->codigo }} - {{ $examen->nombre }} ({{ number_format($examen->valor_total, 0, ',', '.') }})
                                             </option>
                                         @endforeach
@@ -334,7 +334,6 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        const examenPrecioRemision = parseFloat(selectedOption.dataset.precioRemision) || 0;
         const currentIndex = examenesAgregados.length;
 
         // Agregar a los arrays
@@ -349,9 +348,6 @@ document.addEventListener('DOMContentLoaded', function() {
         // Agregar fila
         const row = document.createElement('tr');
         row.dataset.examenId = examenId;
-        const labelRemision = examenPrecioRemision > 0
-            ? `<br><small class="text-muted">Remisión: $${formatNumber(examenPrecioRemision)}</small>`
-            : '<br><small class="text-muted">Sin precio de remisión</small>';
         row.innerHTML = `
             <td>${examenNombre}</td>
             <td>$${formatNumber(examenPrecio)}</td>
@@ -367,7 +363,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     <input class="form-check-input remitido-check" type="checkbox"
                            data-index="${currentIndex}">
                 </div>
-                ${labelRemision}
+                <small class="text-muted lab-hint" style="display:none;">
+                    <i class="fas fa-info-circle me-1"></i>Costo asignado al laboratorio
+                </small>
             </td>
             <td class="text-center">
                 <button type="button" class="btn btn-danger btn-sm eliminar-examen" data-examen-id="${examenId}">
@@ -416,6 +414,8 @@ document.addEventListener('DOMContentLoaded', function() {
         if (e.target.classList.contains('remitido-check')) {
             const index = parseInt(e.target.dataset.index);
             remitidosExamenes[index] = e.target.checked;
+            const hint = e.target.closest('td').querySelector('.lab-hint');
+            if (hint) hint.style.display = e.target.checked ? '' : 'none';
             actualizarInputsHidden();
         }
     });
