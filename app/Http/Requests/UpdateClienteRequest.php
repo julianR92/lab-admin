@@ -19,10 +19,10 @@ class UpdateClienteRequest extends FormRequest
         return [
             'nombre' => ['required', 'string', 'max:100'],
             'apellido' => ['required', 'string', 'max:100'],
-            'tipo_documento' => ['required', 'in:CC,TI,CE,PA,RC'],
+            'tipo_documento' => ['required', 'in:CC,TI,CE,PA,RC,PT'],
             'documento' => ['required', 'string', 'max:20', Rule::unique('clientes', 'documento')->ignore($clienteId)],
             'genero' => ['nullable', 'in:M,F,O'],
-            'fecha_nacimiento' => ['required', 'date', 'before:today', 'after_or_equal:'.now()->subYears(95)->format('Y-m-d')],
+            'fecha_nacimiento' => ['required', 'date', 'before:today', 'after_or_equal:'.now()->subYears(150)->format('Y-m-d')],
             'telefono' => ['nullable', 'string', 'max:20'],
             'email' => ['nullable', 'email', 'max:150'],
             'direccion' => ['nullable', 'string', 'max:255'],

@@ -16,7 +16,7 @@ class StoreClienteRequest extends FormRequest
         return [
             'nombre' => ['required', 'string', 'max:100'],
             'apellido' => ['required', 'string', 'max:100'],
-            'tipo_documento' => ['required', 'in:CC,TI,CE,PA,RC'],
+            'tipo_documento' => ['required', 'in:CC,TI,CE,PA,RC,PT'],
             'documento' => ['required', 'string', 'max:20', 'unique:clientes,documento'],
             'genero' => ['nullable', 'in:M,F,O'],
             'fecha_nacimiento' => ['required', 'date', 'before:today', 'after_or_equal:'.now()->subYears(150)->format('Y-m-d')],

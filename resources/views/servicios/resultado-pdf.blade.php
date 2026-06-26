@@ -540,7 +540,7 @@
     <table class="paciente-table">
         <tr>
             <td class="label">ID de Paciente:</td>
-            <td class="value">{{ $servicio->cliente->documento }}</td>
+            <td class="value">{{ preg_replace('/[^0-9]/', '', $servicio->numero_orden) }}</td>
             <td class="label">Sede:</td>
             <td class="value">{{ $empresa->barrio ?? 'Principal' }}</td>
         </tr>

@@ -58,6 +58,7 @@
                                     <option value="CE" {{ old('tipo_documento') == 'CE' ? 'selected' : '' }}>Cédula de Extranjería</option>
                                     <option value="PA" {{ old('tipo_documento') == 'PA' ? 'selected' : '' }}>Pasaporte</option>
                                     <option value="RC" {{ old('tipo_documento') == 'RC' ? 'selected' : '' }}>Registro Civil</option>
+                                    <option value="PT" {{ old('tipo_documento') == 'PT' ? 'selected' : '' }}>Permiso Temporal</option>
                                 </select>
                                 @error('tipo_documento')
                                     <div class="invalid-feedback">{{ $message }}</div>
