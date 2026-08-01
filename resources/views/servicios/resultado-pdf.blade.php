@@ -564,7 +564,7 @@
         </tr>
         <tr>
             <td class="label">Edad:</td>
-            <td class="value">{{ $servicio->cliente->edad }} años</td>
+            <td class="value">{{ $servicio->cliente->edad_texto }}</td>
             <td class="label">Ciudad:</td>
             <td class="value" style="text-transform: capitalize;">{{ ucwords(strtolower($servicio->cliente->ciudad ?? 'No registrado')) }}</td>
         </tr>
