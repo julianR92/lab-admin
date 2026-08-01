@@ -67,7 +67,7 @@
                                         <strong>Género:</strong> <span id="infoGenero"></span>
                                     </div>
                                     <div class="col-md-6">
-                                        <strong>Edad:</strong> <span id="infoEdad"></span> años<br>
+                                        <strong>Edad:</strong> <span id="infoEdad"></span><br>
                                         <strong>Teléfono:</strong> <span id="infoTelefono"></span><br>
                                         <strong>EPS:</strong> <span id="infoEps"></span>
                                     </div>
@@ -270,7 +270,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <div class="d-flex justify-content-between">
                                     <div>
                                         <strong>${cliente.nombre_completo}</strong><br>
-                                        <small class="text-muted">${cliente.tipo_documento}: ${cliente.documento} | Edad: ${cliente.edad} años | Género: ${cliente.genero}</small>
+                                        <small class="text-muted">${cliente.tipo_documento}: ${cliente.documento} | Edad: ${cliente.edad_texto} | Género: ${cliente.genero}</small>
                                     </div>
                                 </div>
                             </a>
@@ -301,7 +301,7 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('infoNombre').textContent = cliente.nombre_completo;
             document.getElementById('infoDocumento').textContent = `${cliente.tipo_documento}: ${cliente.documento}`;
             document.getElementById('infoGenero').textContent = cliente.genero;
-            document.getElementById('infoEdad').textContent = cliente.edad;
+            document.getElementById('infoEdad').textContent = cliente.edad_texto;
             document.getElementById('infoTelefono').textContent = cliente.telefono || 'No registrado';
             document.getElementById('infoEps').textContent = cliente.eps || 'No registrado';
 

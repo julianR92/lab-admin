@@ -30,6 +30,7 @@ class ClienteController extends Controller
                     'documento'        => $cliente->documento,
                     'tipo_documento'   => $cliente->tipo_documento,
                     'edad'             => $cliente->edad,
+                    'edad_texto'       => $cliente->edad_texto,
                     'genero'           => $cliente->genero,
                     'telefono'         => $cliente->telefono,
                     'email'            => $cliente->email,

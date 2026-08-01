@@ -40,10 +40,30 @@ class Cliente extends Model
         return "{$this->nombre} {$this->apellido}";
     }
 
-    // Accessor para edad (aunque está en la BD, útil para consultas)
+    // Accessor para edad en años (usado en evaluación de valores de referencia)
     public function getEdadAttribute(): int
     {
         return $this->fecha_nacimiento->age;
+    }
+
+    // Accessor para edad formateada (días/meses/años según corresponda)
+    public function getEdadTextoAttribute(): string
+    {
+        $nacimiento = \Carbon\Carbon::parse($this->fecha_nacimiento);
+        $hoy = \Carbon\Carbon::now();
+
+        $anos = (int) $nacimiento->diffInYears($hoy);
+        if ($anos >= 1) {
+            return "{$anos} años";
+        }
+
+        $meses = (int) $nacimiento->diffInMonths($hoy);
+        if ($meses >= 1) {
+            return "{$meses} meses";
+        }
+
+        $dias = (int) $nacimiento->diffInDays($hoy);
+        return "{$dias} días";
     }
 
     // Scope para búsquedas por documento

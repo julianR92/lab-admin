@@ -64,7 +64,7 @@
 
                         <div class="col-md-4 mb-3">
                             <label class="text-muted small">Edad</label>
-                            <h6>{{ \Carbon\Carbon::parse($cliente->fecha_nacimiento)->age}} años</h6>
+                            <h6>{{ $cliente->edad_texto }}</h6>
                         </div>
 
                         <!-- Información de Contacto -->
